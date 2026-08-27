@@ -14,6 +14,7 @@ import BookingSuccessModal from './components/BookingSuccessModal';
 import FindBookingModal from './components/FindBookingModal';
 import AdminDashboard from './components/admin/AdminDashboard';
 import { fetchRooms, fetchSettings } from './utils/api';
+import tnauLogo from './assets/tnau_logo.png';
 
 export default function App() {
   // Today and Tomorrow strings
@@ -135,7 +136,7 @@ export default function App() {
       />
 
       {/* ROOMS CATALOG SECTION */}
-      <main ref={roomsSectionRef} style={{ padding: '4rem 0 5rem', flex: 1 }}>
+      <main ref={roomsSectionRef} style={{ padding: '3.5rem 0 5rem', flex: 1, background: 'var(--bg-main)' }}>
         <div className="container">
           
           {/* Section Heading & Category Filter Bar */}
@@ -152,8 +153,8 @@ export default function App() {
                 <Sparkles size={13} />
                 <span>Our Accommodations</span>
               </div>
-              <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
-                Available Luxury Rooms & Suites
+              <h2 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--tnau-green)' }}>
+                Available Rooms & Accommodations
               </h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
                 Showing available rooms for {checkIn} → {checkOut} ({nights} {nights === 1 ? 'Night' : 'Nights'}, {guests} {guests === 1 ? 'Guest' : 'Guests'})
@@ -183,21 +184,22 @@ export default function App() {
               gap: '2rem'
             }}>
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="glass-panel" style={{ height: '420px', borderRadius: 'var(--radius-xl)', opacity: 0.5, animation: 'pulseGlow 1.5s infinite' }} />
+                <div key={i} className="skeleton" style={{ height: '420px', borderRadius: 'var(--radius-xl)' }} />
               ))}
             </div>
           ) : rooms.length === 0 ? (
             <div style={{
               textAlign: 'center',
               padding: '4rem 2rem',
-              background: 'var(--bg-surface-elevated)',
+              background: '#ffffff',
               borderRadius: 'var(--radius-xl)',
               border: '1px solid var(--border-subtle)',
+              boxShadow: 'var(--shadow-sm)',
               maxWidth: '600px',
               margin: '0 auto'
             }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏝️</div>
-              <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏢</div>
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--tnau-green)', marginBottom: '0.5rem' }}>
                 No Rooms Found
               </h3>
               <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.925rem' }}>
@@ -234,119 +236,119 @@ export default function App() {
         </div>
       </main>
 
-      {/* WHY CHOOSE US & RESORT FEATURES */}
+      {/* WHY CHOOSE US & FEATURES */}
       <section style={{
         padding: '4.5rem 0',
-        background: 'linear-gradient(180deg, var(--bg-main) 0%, var(--bg-surface) 100%)',
+        background: '#ffffff',
         borderTop: '1px solid var(--border-subtle)',
         borderBottom: '1px solid var(--border-subtle)'
       }}>
         <div className="container">
           
-          <div style={{ textAlign: 'center', maxWidth: '640px', margin: '0 auto 3.5rem' }}>
-            <div className="badge badge-gold" style={{ marginBottom: '0.5rem' }}>
+          <div style={{ textAlign: 'center', maxWidth: '640px', margin: '0 auto 3rem' }}>
+            <div className="badge badge-gold" style={{ marginBottom: '0.6rem' }}>
               <Award size={13} />
-              <span>The Serenity Guarantee</span>
+              <span>Why Book With Us</span>
             </div>
-            <h2 style={{ fontSize: '2.1rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.75rem' }}>
-              Why Book Directly With Us?
+            <h2 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--tnau-green)', marginBottom: '0.75rem' }}>
+              Simple, Secure & Instant Booking
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-              Experience frictionless luxury booking with instant WhatsApp confirmations and transparent pricing.
+              Reserve your accommodation at TNAU with ease — no logins, instant WhatsApp confirmations, and transparent pricing.
             </p>
           </div>
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: '1.75rem'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '1.25rem'
           }}>
             
-            <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
+            <div className="info-card">
               <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'rgba(37, 211, 102, 0.12)',
-                color: '#25D366',
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
+                background: 'rgba(37, 211, 102, 0.1)',
+                color: '#16a34a',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '1.25rem'
+                marginBottom: '1rem'
               }}>
-                <MessageCircle size={24} />
+                <MessageCircle size={22} />
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.5rem' }}>
-                WhatsApp Direct Confirmations
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+                WhatsApp Confirmations
               </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                Receive full booking receipts, room voucher, and Google Maps directions straight to your WhatsApp mobile number instantly.
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.87rem', lineHeight: 1.6 }}>
+                Receive full booking receipts and vouchers directly on your WhatsApp instantly after booking.
               </p>
             </div>
 
-            <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
+            <div className="info-card">
               <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'rgba(16, 185, 129, 0.12)',
-                color: '#34d399',
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
+                background: 'rgba(26, 107, 50, 0.08)',
+                color: 'var(--tnau-green)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '1.25rem'
+                marginBottom: '1rem'
               }}>
-                <ShieldCheck size={24} />
+                <ShieldCheck size={22} />
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.5rem' }}>
-                Zero Account Friction
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+                No Account Needed
               </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                No passwords to remember. Reserve your room in less than 60 seconds using just your name and mobile phone number.
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.87rem', lineHeight: 1.6 }}>
+                No passwords to remember. Reserve in under 60 seconds using just your name and phone number.
               </p>
             </div>
 
-            <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
+            <div className="info-card">
               <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'rgba(245, 158, 11, 0.12)',
-                color: '#fbbf24',
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
+                background: 'rgba(184, 134, 11, 0.1)',
+                color: 'var(--tnau-gold-dark)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '1.25rem'
+                marginBottom: '1rem'
               }}>
-                <CreditCard size={24} />
+                <CreditCard size={22} />
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.5rem' }}>
-                Flexible Payment Modes
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+                Flexible Payment
               </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                Pay securely via UPI QR Code, Instant Debit/Credit Cards, or opt to pay at check-in upon arrival at the property.
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.87rem', lineHeight: 1.6 }}>
+                Pay via UPI QR Code, Debit/Credit Cards, or at the front desk upon check-in.
               </p>
             </div>
 
-            <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
+            <div className="info-card">
               <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'rgba(59, 130, 246, 0.12)',
-                color: '#60a5fa',
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
+                background: 'rgba(29, 78, 216, 0.08)',
+                color: 'var(--accent-blue)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '1.25rem'
+                marginBottom: '1rem'
               }}>
-                <Sparkles size={24} />
+                <Sparkles size={22} />
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.5rem' }}>
-                Best Price Guarantee
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+                Best Rate Guaranteed
               </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                Direct booking ensures the lowest available tariffs with no third-party booking commissions or surprise check-in fees.
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.87rem', lineHeight: 1.6 }}>
+                Direct booking gives you the best available tariffs — no commissions or hidden fees.
               </p>
             </div>
 
@@ -364,15 +366,15 @@ export default function App() {
               <HelpCircle size={13} />
               <span>Questions & Answers</span>
             </div>
-            <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--tnau-green)' }}>
               Frequently Asked Questions
             </h2>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             
-            <div className="glass-panel" style={{ padding: '1.4rem', borderRadius: 'var(--radius-md)' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
+            <div style={{ padding: '1.4rem', borderRadius: 'var(--radius-md)', background: '#ffffff', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)' }}>
+              <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
                 Do I need an account or login to book a room?
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
@@ -380,30 +382,30 @@ export default function App() {
               </p>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.4rem', borderRadius: 'var(--radius-md)' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
+            <div style={{ padding: '1.4rem', borderRadius: 'var(--radius-md)', background: '#ffffff', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)' }}>
+              <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
                 How do I receive my booking confirmation via WhatsApp?
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                As soon as your booking is finalized, a dedicated WhatsApp confirmation link is automatically generated with your complete reservation details, check-in time, and resort directions. You can click <strong>"Open in WhatsApp"</strong> on your phone to open the chat instantly.
+                As soon as your booking is finalized, a WhatsApp confirmation link is generated with your complete reservation details. Click <strong>"Open in WhatsApp"</strong> on your phone to open the chat instantly.
               </p>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.4rem', borderRadius: 'var(--radius-md)' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
+            <div style={{ padding: '1.4rem', borderRadius: 'var(--radius-md)', background: '#ffffff', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)' }}>
+              <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
                 How can I check my booking status later?
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                Click the <strong>"My Booking"</strong> button in the top navigation bar at any time and enter your phone number or booking reference code (e.g. SH-849201) to view and download your voucher.
+                Click the <strong>"My Booking"</strong> button in the top navigation bar and enter your phone number or booking reference code to view and download your voucher.
               </p>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.4rem', borderRadius: 'var(--radius-md)' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
+            <div style={{ padding: '1.4rem', borderRadius: 'var(--radius-md)', background: '#ffffff', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)' }}>
+              <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
                 What are the check-in and check-out times?
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                Check-in is from 2:00 PM onwards, and check-out is until 11:00 AM. Early check-in or late check-out is subject to availability and can be requested via WhatsApp prior to your arrival.
+                Check-in is from 2:00 PM onwards, and check-out is until 11:00 AM. Early check-in or late check-out is subject to availability — please contact the front desk in advance.
               </p>
             </div>
 
@@ -414,41 +416,39 @@ export default function App() {
 
       {/* FOOTER */}
       <footer style={{
-        background: '#070a10',
-        borderTop: '1px solid var(--border-subtle)',
-        padding: '3.5rem 0 2rem',
+        background: 'var(--tnau-green)',
+        borderTop: '1px solid rgba(255,255,255,0.1)',
+        padding: '3rem 0 1.75rem',
         marginTop: 'auto'
       }}>
         <div className="container">
           
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
             gap: '2.5rem',
-            marginBottom: '3rem'
+            marginBottom: '2.5rem'
           }}>
             
             {/* Brand column */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #10b981, #065f46)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#ffffff'
-                }}>
-                  <Hotel size={20} />
+                <img
+                  src={tnauLogo}
+                  alt="TNAU"
+                  style={{ width: '42px', height: '42px', objectFit: 'contain', borderRadius: '50%', background: '#fff', padding: '2px' }}
+                />
+                <div>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
+                    {settings.hotel_name || 'TNAU Guest House'}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+                    Tamil Nadu Agricultural University
+                  </div>
                 </div>
-                <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', fontWeight: 800, color: '#ffffff' }}>
-                  {settings.hotel_name || 'Serenity Haven'}
-                </span>
               </div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                {settings.tagline || 'Experience Unmatched Serenity & Coastal Luxury'}
+              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                {settings.tagline || 'Comfortable accommodation for TNAU guests, researchers, and visitors.'}
               </p>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <a
@@ -458,51 +458,51 @@ export default function App() {
                   className="btn btn-whatsapp btn-sm"
                 >
                   <MessageCircle size={15} />
-                  <span>WhatsApp Concierge</span>
+                  <span>WhatsApp Us</span>
                 </a>
               </div>
             </div>
 
             {/* Contact details */}
             <div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '1rem' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginBottom: '1rem' }}>
                 Contact & Location
               </h4>
-              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.75)' }}>
                 <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                  <MapPin size={16} color="#34d399" style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <span>{settings.address || 'Beachside Road, Palolem, South Goa, India'}</span>
+                  <MapPin size={15} color="#fbbf24" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <span>{settings.address || 'TNAU Campus, Coimbatore - 641003, Tamil Nadu'}</span>
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Phone size={16} color="#60a5fa" />
-                  <span>{settings.phone || '+91 98765 43210'}</span>
+                  <Phone size={15} color="#fbbf24" />
+                  <span>{settings.phone || '+91 422 661 1200'}</span>
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Mail size={16} color="#fbbf24" />
-                  <span>{settings.email || 'bookings@serenityhaven.com'}</span>
+                  <Mail size={15} color="#fbbf24" />
+                  <span>{settings.email || 'guesthouse@tnau.ac.in'}</span>
                 </li>
               </ul>
             </div>
 
             {/* Quick Links & Owner Entry */}
             <div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '1rem' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginBottom: '1rem' }}>
                 Quick Navigation
               </h4>
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem' }}>
                 <li>
-                  <button onClick={handleScrollToRooms} style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }}>
-                    → Explore Rooms & Suites
+                  <button onClick={handleScrollToRooms} style={{ color: 'rgba(255,255,255,0.75)', transition: 'color 0.2s' }}>
+                    → Browse Rooms
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => setShowFindBookingModal(true)} style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }}>
+                  <button onClick={() => setShowFindBookingModal(true)} style={{ color: 'rgba(255,255,255,0.75)', transition: 'color 0.2s' }}>
                     → Find My Reservation
                   </button>
                 </li>
                 <li>
                   <button onClick={() => setShowAdminModal(true)} style={{ color: '#fbbf24', fontWeight: 600, transition: 'color 0.2s' }}>
-                    🛡️ Owner / Admin Management
+                    🛡️ Admin Portal
                   </button>
                 </li>
               </ul>
@@ -511,23 +511,23 @@ export default function App() {
           </div>
 
           <div style={{
-            paddingTop: '1.5rem',
-            borderTop: '1px solid var(--border-subtle)',
+            paddingTop: '1.25rem',
+            borderTop: '1px solid rgba(255,255,255,0.15)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: '0.75rem',
-            fontSize: '0.8rem',
-            color: 'var(--text-muted)'
+            fontSize: '0.78rem',
+            color: 'rgba(255,255,255,0.6)'
           }}>
             <div>
-              © {new Date().getFullYear()} {settings.hotel_name || 'Serenity Haven Retreat'}. All rights reserved.
+              © {new Date().getFullYear()} {settings.hotel_name || 'TNAU Guest House'} · Tamil Nadu Agricultural University. All rights reserved.
             </div>
             <div style={{ display: 'flex', gap: '1rem' }}>
-              <span>Instant Guest Booking System</span>
+              <span>Online Room Booking System</span>
               <span>•</span>
-              <span>Direct WhatsApp Confirmations</span>
+              <span>WhatsApp Confirmations</span>
             </div>
           </div>
 

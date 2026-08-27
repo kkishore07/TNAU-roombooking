@@ -30,27 +30,28 @@ export default function RoomCard({ room, onSelectRoom, onViewDetails, currencySy
 
   return (
     <div 
-      className="glass-panel" 
       style={{
+        background: '#ffffff',
         borderRadius: 'var(--radius-xl)',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         transition: 'transform var(--transition-normal), box-shadow var(--transition-normal)',
-        border: '1px solid rgba(255, 255, 255, 0.09)',
+        border: '1px solid var(--border-subtle)',
+        boxShadow: 'var(--shadow-card)',
         position: 'relative'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = '0 16px 36px rgba(0,0,0,0.45)';
+        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.1), 0 4px 12px rgba(26,107,50,0.08)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.boxShadow = 'var(--shadow-card)';
       }}
     >
       {/* Image Gallery Container */}
-      <div style={{ position: 'relative', width: '100%', height: '240px', overflow: 'hidden', background: '#0b0f17' }}>
+      <div style={{ position: 'relative', width: '100%', height: '220px', overflow: 'hidden', background: '#f1f5f9' }}>
         <img 
           src={images[currentImgIndex]} 
           alt={room.name}
@@ -166,7 +167,7 @@ export default function RoomCard({ room, onSelectRoom, onViewDetails, currencySy
           {/* Key Specs Bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--text-secondary)', fontSize: '0.825rem', marginBottom: '0.6rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <Users size={14} color="#34d399" />
+              <Users size={14} color="var(--tnau-green)" />
               <span>Up to {room.capacity} Guests</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -182,7 +183,7 @@ export default function RoomCard({ room, onSelectRoom, onViewDetails, currencySy
           </div>
 
           {/* Title */}
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.6rem', color: '#ffffff' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
             {room.name}
           </h3>
 
@@ -208,16 +209,16 @@ export default function RoomCard({ room, onSelectRoom, onViewDetails, currencySy
                 style={{
                   fontSize: '0.75rem',
                   padding: '0.25rem 0.6rem',
-                  background: 'var(--bg-surface-elevated)',
+                  background: 'var(--tnau-green-light)',
                   borderRadius: 'var(--radius-sm)',
-                  color: 'var(--text-secondary)',
-                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--tnau-green-dark)',
+                  border: '1px solid rgba(26, 107, 50, 0.15)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.3rem'
                 }}
               >
-                <Check size={12} color="#34d399" />
+                <Check size={12} color="var(--tnau-green)" />
                 {amenity}
               </span>
             ))}
@@ -241,7 +242,7 @@ export default function RoomCard({ room, onSelectRoom, onViewDetails, currencySy
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
-              <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
+              <span style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--tnau-green)', fontFamily: 'var(--font-heading)' }}>
                 {currencySymbol}{Number(room.price_per_night).toLocaleString('en-IN')}
               </span>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>/ night</span>
