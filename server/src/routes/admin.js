@@ -246,4 +246,36 @@ router.put('/settings', (req, res) => {
   }
 });
 
+// POST /api/admin/test-notifications - Send a test email to verify credentials
+router.post('/test-notifications', async (req, res) => {
+  try {
+    const { target_email } = req.body;
+    const settings = db.prepare('SELECT * FROM settings WHERE id = ?').get('general') || {};
+    
+    const dummyBooking = {
+      id: 'test-diagnostic',
+      booking_code: 'TNAU-TEST-001',
+      customer_name: 'Admin Test',
+      customer_email: target_email || process.env.GMAIL_USER,
+      customer_phone: '9786000328',
+      check_in_date: '2026-09-01',
+      check_out_date: '2026-09-02',
+      num_nights: 1,
+      num_guests: 1,
+      total_amount: 1999,
+      payment_status: 'paid',
+      payment_method: 'upi'
+    };
+
+    const dummyRoom = { name: 'Executive Suite', category: 'Suite' };
+    const { sendBookingNotifications } = await import('../services/notifications.js');
+    const result = await sendBookingNotifications(dummyBooking, dummyRoom, settings);
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Test notification error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 export default router;

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  X, Check, ShieldCheck, CreditCard, QrCode, Building, 
-  User, Phone, Mail, MessageSquare, Calendar, ChevronRight, 
-  ChevronLeft, Sparkles, AlertCircle, Copy, CheckCheck, Loader2
+import React, { useState, useEffect } from 'react';
+import {
+  X, Check, ShieldCheck, QrCode, Building,
+  User, Phone, Mail, MessageSquare, Calendar, ChevronRight,
+  ChevronLeft, Copy, CheckCheck, Loader2, Sparkles,
+  ExternalLink, Smartphone, BadgeCheck, AlertCircle, Info
 } from 'lucide-react';
-import { createBooking, processPayment } from '../utils/api';
+import { createBooking, processPayment, fetchPaymentConfig } from '../utils/api';
 
 export default function BookingModal({
   room,
@@ -22,29 +23,35 @@ export default function BookingModal({
   const [email, setEmail] = useState('');
   const [guestCount, setGuestCount] = useState(guests || 1);
   const [specialRequests, setSpecialRequests] = useState('');
-  
-  // Payment States
-  const [paymentMethod, setPaymentMethod] = useState('card'); // 'card', 'upi', 'pay_at_property'
-  const [cardNumber, setCardNumber] = useState('4532 •••• •••• 8892');
-  const [cardExpiry, setCardExpiry] = useState('08/28');
-  const [cardCvv, setCardCvv] = useState('884');
+
+  // Payment states: 'upi' | 'pay_at_property'
+  const [paymentMethod, setPaymentMethod] = useState('upi');
   const [upiRef, setUpiRef] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [payConfig, setPayConfig] = useState(null);
 
-  // Calculate pricing
-  const nights = Math.max(1, Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)));
-  const baseRate = room.price_per_night * nights;
-  const taxAmount = Math.round(baseRate * ((settings?.tax_percentage || 12) / 100));
-  const totalAmount = baseRate + taxAmount;
+  // Pricing calculation
+  const nights    = Math.max(1, Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)));
+  const baseRate  = room.price_per_night * nights;
+  const taxPct    = settings?.tax_percentage !== undefined ? settings.tax_percentage : 12;
+  const taxAmount = Math.round(baseRate * (taxPct / 100));
+  const total     = baseRate + taxAmount;
 
-  const upiId = settings?.upi_id || 'azurehorizon@okhdfcbank';
-  const upiMerchant = settings?.upi_merchant_name || 'Serenity Haven Retreat';
-  
-  // Dynamic UPI URL for QR Code
-  const upiDeepLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiMerchant)}&am=${totalAmount}&cu=INR&tn=RoomBooking_${room.name.substring(0, 10)}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiDeepLink)}`;
+  const upiId       = payConfig?.upi_id       || settings?.upi_id       || '9786000328@fam';
+  const upiMerchant = payConfig?.upi_merchant_name || settings?.hotel_name || 'TNAU Guest House';
+
+  // Dynamic UPI Deep-link for mobile UPI apps
+  const upiDeepLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(upiMerchant)}&am=${total}&cu=INR&tn=${encodeURIComponent(`TNAU_${room.name.substring(0, 12)}`)}`;
+  // QR Code generator
+  const qrCodeUrl   = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiDeepLink)}&margin=10`;
+
+  useEffect(() => {
+    fetchPaymentConfig().then(r => {
+      if (r.success) setPayConfig(r.data);
+    });
+  }, []);
 
   const handleCopyUpi = () => {
     navigator.clipboard.writeText(upiId);
@@ -52,36 +59,39 @@ export default function BookingModal({
     setTimeout(() => setCopiedUpi(false), 2500);
   };
 
+  // ── Step 1 Validation & Proceed ──────────────────────────────────────────
   const handleProceedToPayment = (e) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Please enter your full name');
       return;
     }
-    if (!phone.trim() || phone.replace(/[^0-9]/g, '').length < 8) {
-      setError('Please provide a valid WhatsApp mobile number so we can send your confirmation');
+    const cleanDigits = phone.replace(/[^0-9]/g, '');
+    if (cleanDigits.length < 10) {
+      setError('Please provide a valid 10-digit mobile number for confirmation');
       return;
     }
     setError('');
     setStep(2);
   };
 
+  // ── Final Booking & Payment Processing ────────────────────────────────────
   const handleFinalBookingAndPayment = async () => {
     setLoading(true);
     setError('');
 
     try {
-      // 1. Create booking in system
+      // 1. Create booking reservation
       const bookingPayload = {
-        room_id: room.id,
-        customer_name: name.trim(),
-        customer_phone: phone.trim(),
-        customer_email: email.trim(),
-        check_in_date: checkIn,
-        check_out_date: checkOut,
-        num_guests: parseInt(guestCount, 10),
-        payment_method: paymentMethod,
-        payment_reference: paymentMethod === 'upi' ? (upiRef || `UPI-TXN-${Date.now()}`) : `CARD-TXN-${Date.now()}`,
+        room_id:          room.id,
+        customer_name:    name.trim(),
+        customer_phone:   phone.trim(),
+        customer_email:   email.trim(),
+        check_in_date:    checkIn,
+        check_out_date:   checkOut,
+        num_guests:       parseInt(guestCount, 10),
+        payment_method:   paymentMethod,
+        payment_reference: paymentMethod === 'upi' ? (upiRef.trim() || `UPI_${Date.now()}`) : 'PAY_AT_CHECKIN',
         special_requests: specialRequests
       };
 
@@ -90,20 +100,27 @@ export default function BookingModal({
         throw new Error(result.message || 'Failed to confirm booking');
       }
 
-      // 2. Process / verify payment if not pay_at_property
-      if (paymentMethod !== 'pay_at_property') {
-        await processPayment({
-          booking_id: result.data.booking.id,
-          amount: totalAmount,
-          payment_method: paymentMethod,
-          upi_reference: upiRef
-        });
-      }
+      const booking = result.data.booking;
 
-      // 3. Hand off to Success Modal
-      onBookingSuccess(result.data);
+      // 2. Process / record payment reference
+      const paymentRes = await processPayment({
+        booking_id:     booking.id,
+        amount:         total,
+        payment_method: paymentMethod,
+        upi_reference:  paymentMethod === 'upi' ? (upiRef.trim() || `UPI_${Date.now()}`) : undefined
+      });
+
+      // 3. Attach notifications info to response data if available
+      const finalData = {
+        ...result.data,
+        notifications: paymentRes?.data?.notifications || result.data?.notifications
+      };
+
+      // 4. Pass full booking data to success modal
+      onBookingSuccess(finalData);
+
     } catch (err) {
-      console.error(err);
+      console.error('Booking submission error:', err);
       setError(err.message || 'Error processing reservation. Please try again.');
     } finally {
       setLoading(false);
@@ -112,8 +129,8 @@ export default function BookingModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div 
-        className="modal-content" 
+      <div
+        className="modal-content"
         style={{ maxWidth: '680px' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -122,22 +139,17 @@ export default function BookingModal({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
               <span className="badge badge-emerald">
-                {step === 1 ? 'Step 1 of 2: Guest Details' : 'Step 2 of 2: Secure Payment'}
+                {step === 1 ? 'Step 1 of 2: Guest Details' : 'Step 2 of 2: Confirm & Pay'}
               </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>• Zero Account Required</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>• Zero Convenience Fee</span>
             </div>
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#ffffff' }}>
-              {step === 1 ? 'Guest Information & Stay Review' : 'Complete Room Reservation'}
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              {step === 1 ? 'Guest Information & Stay Review' : 'Payment & Instant Confirmation'}
             </h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
-            style={{
-              padding: '0.5rem',
-              borderRadius: '50%',
-              background: 'var(--bg-surface-elevated)',
-              color: 'var(--text-secondary)'
-            }}
+            style={{ padding: '0.5rem', borderRadius: '50%', background: 'var(--bg-surface-elevated)', color: 'var(--text-secondary)' }}
           >
             <X size={20} />
           </button>
@@ -145,13 +157,13 @@ export default function BookingModal({
 
         {/* Modal Body */}
         <div className="modal-body">
-          
+
           {/* Booking Summary Box */}
           <div style={{
             padding: '1rem 1.25rem',
-            background: 'var(--bg-surface-elevated)',
+            background: 'var(--tnau-green-light)',
             borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-subtle)',
+            border: '1px solid rgba(26, 107, 50, 0.2)',
             marginBottom: '1.5rem',
             display: 'flex',
             justifyContent: 'space-between',
@@ -160,102 +172,88 @@ export default function BookingModal({
             gap: '0.75rem'
           }}>
             <div>
-              <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '1.05rem' }}>{room.name}</div>
-              <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', gap: '0.75rem', marginTop: '0.2rem' }}>
-                <span>📅 {checkIn} to {checkOut} ({nights} {nights === 1 ? 'Night' : 'Nights'})</span>
-                <span>👥 {guestCount} Guest(s)</span>
+              <div style={{ fontWeight: 700, color: 'var(--tnau-green)', fontSize: '1.05rem' }}>{room.name}</div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                {checkIn} → {checkOut} · {nights} Night{nights > 1 ? 's' : ''} · {guestCount} Guest{guestCount > 1 ? 's' : ''}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Amount</div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#34d399', fontFamily: 'var(--font-heading)' }}>
-                {currencySymbol}{totalAmount.toLocaleString('en-IN')}
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--tnau-green)', fontFamily: 'var(--font-heading)' }}>
+                {currencySymbol}{total.toLocaleString('en-IN')}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                incl. {taxPct}% tax · No extra fees
               </div>
             </div>
           </div>
 
-          {error && (
-            <div style={{
-              padding: '0.75rem 1rem',
-              background: 'rgba(244, 63, 94, 0.12)',
-              border: '1px solid rgba(244, 63, 94, 0.3)',
-              borderRadius: 'var(--radius-sm)',
-              color: '#fb7185',
-              fontSize: '0.85rem',
-              marginBottom: '1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <AlertCircle size={16} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* STEP 1: Guest Information */}
+          {/* ── STEP 1: Guest Details ─────────────────────────────────────── */}
           {step === 1 && (
             <form onSubmit={handleProceedToPayment}>
-              
+
               <div className="form-group">
                 <label className="form-label">
-                  <User size={15} color="#34d399" />
-                  <span>Full Name (Primary Guest) *</span>
+                  <User size={14} color="var(--tnau-green)" />
+                  Full Name *
                 </label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Johnathan Doe"
+                  placeholder="e.g. Dr. K. Ramesh / S. Priya"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
+                  autoFocus
                 />
               </div>
 
               <div className="form-group">
                 <label className="form-label">
-                  <Phone size={15} color="#25D366" />
-                  <span>WhatsApp Mobile Number * (For Instant Confirmation)</span>
+                  <Phone size={14} color="var(--tnau-green)" />
+                  WhatsApp / Mobile Number *
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="tel"
-                    className="form-input"
-                    placeholder="e.g. +91 98765 43210"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                  />
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                  💬 We will send your official booking voucher and check-in directions directly to this WhatsApp number.
+                <input
+                  type="tel"
+                  className="form-input"
+                  placeholder="+91 98765 43210"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                />
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <MessageSquare size={12} color="#25D366" />
+                  Instant WhatsApp voucher & SMS confirmation will be sent to this number
                 </div>
               </div>
 
               <div className="form-group">
                 <label className="form-label">
-                  <Mail size={15} color="#60a5fa" />
-                  <span>Email Address (Optional)</span>
+                  <Mail size={14} color="var(--tnau-gold)" />
+                  Email Address (for Official PDF/Receipt)
                 </label>
                 <input
                   type="email"
                   className="form-input"
-                  placeholder="e.g. guest@example.com"
+                  placeholder="your.email@tnau.ac.in or gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                  Optional — receives automated itemized receipt
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label className="form-label">
-                    <span>Number of Guests</span>
+                    <User size={14} /> Number of Guests
                   </label>
                   <select
                     className="form-select"
                     value={guestCount}
-                    onChange={(e) => setGuestCount(e.target.value)}
+                    onChange={(e) => setGuestCount(parseInt(e.target.value, 10))}
                   >
-                    {Array.from({ length: room.capacity || 4 }, (_, i) => i + 1).map(n => (
+                    {[1,2,3,4,5,6].map(n => (
                       <option key={n} value={n}>{n} {n === 1 ? 'Guest' : 'Guests'}</option>
                     ))}
                   </select>
@@ -263,321 +261,307 @@ export default function BookingModal({
 
                 <div className="form-group">
                   <label className="form-label">
-                    <span>Expected Arrival Time</span>
+                    <MessageSquare size={14} /> Special Requests / Department
                   </label>
-                  <select className="form-select">
-                    <option>Standard (2:00 PM - 6:00 PM)</option>
-                    <option>Late Check-in (After 6:00 PM)</option>
-                    <option>Early Check-in (Subject to availability)</option>
-                  </select>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Agronomy Dept / Early check-in"
+                    value={specialRequests}
+                    onChange={(e) => setSpecialRequests(e.target.value)}
+                  />
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">
-                  <MessageSquare size={15} color="#fbbf24" />
-                  <span>Special Requests / Notes</span>
-                </label>
-                <textarea
-                  className="form-textarea"
-                  rows="2"
-                  placeholder="e.g. Quiet room, extra pillow, anniversary decor..."
-                  value={specialRequests}
-                  onChange={(e) => setSpecialRequests(e.target.value)}
-                />
-              </div>
+              {error && (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.75rem 1rem', background: 'var(--accent-rose-light)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 'var(--radius-md)', marginTop: '1rem', fontSize: '0.875rem', color: 'var(--accent-rose)' }}>
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
 
-              {/* Price Breakdown Preview */}
-              <div style={{
-                padding: '1rem',
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: 'var(--radius-md)',
-                fontSize: '0.85rem',
-                marginTop: '1.25rem',
-                border: '1px solid var(--border-subtle)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>
-                  <span>{currencySymbol}{Number(room.price_per_night).toLocaleString('en-IN')} × {nights} {nights === 1 ? 'Night' : 'Nights'}</span>
-                  <span>{currencySymbol}{baseRate.toLocaleString('en-IN')}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>
-                  <span>Estimated Taxes & Resort Fees ({settings?.tax_percentage || 12}%)</span>
-                  <span>{currencySymbol}{taxAmount.toLocaleString('en-IN')}</span>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  paddingTop: '0.5rem',
-                  borderTop: '1px solid var(--border-subtle)',
-                  fontWeight: 700,
-                  fontSize: '0.95rem',
-                  color: '#ffffff'
-                }}>
-                  <span>Total Due</span>
-                  <span style={{ color: '#34d399' }}>{currencySymbol}{totalAmount.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button type="button" onClick={onClose} className="btn btn-outline">
-                  Cancel
-                </button>
+              <div className="modal-footer" style={{ position: 'static', marginTop: '1.5rem', padding: '0', background: 'transparent', border: 'none', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={onClose} className="btn btn-outline-gray">Cancel</button>
                 <button type="submit" className="btn btn-primary">
-                  <span>Continue to Payment</span>
-                  <ChevronRight size={16} />
+                  Continue to Payment
+                  <ChevronRight size={17} />
                 </button>
               </div>
-
             </form>
           )}
 
-          {/* STEP 2: Payment Options */}
+          {/* ── STEP 2: Payment (UPI / Pay at Front Desk) ────────────────── */}
           {step === 2 && (
             <div>
-              
-              {/* Payment Method Selector Tabs */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem', marginBottom: '1.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('card')}
-                  style={{
-                    padding: '0.85rem 0.5rem',
-                    borderRadius: 'var(--radius-md)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    background: paymentMethod === 'card' ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-surface-elevated)',
-                    border: paymentMethod === 'card' ? '2px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                    color: paymentMethod === 'card' ? '#ffffff' : 'var(--text-secondary)',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <CreditCard size={20} color={paymentMethod === 'card' ? '#34d399' : 'currentColor'} />
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>Card / Instant</span>
-                </button>
 
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('upi')}
-                  style={{
-                    padding: '0.85rem 0.5rem',
-                    borderRadius: 'var(--radius-md)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    background: paymentMethod === 'upi' ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-surface-elevated)',
-                    border: paymentMethod === 'upi' ? '2px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                    color: paymentMethod === 'upi' ? '#ffffff' : 'var(--text-secondary)',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <QrCode size={20} color={paymentMethod === 'upi' ? '#34d399' : 'currentColor'} />
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>UPI / QR Code</span>
-                </button>
+              {/* Payment Method Selector */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                  Choose Payment Method
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
 
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('pay_at_property')}
-                  style={{
-                    padding: '0.85rem 0.5rem',
-                    borderRadius: 'var(--radius-md)',
+                  {/* Direct UPI Option */}
+                  <label style={{
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '0.4rem',
-                    background: paymentMethod === 'pay_at_property' ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-surface-elevated)',
-                    border: paymentMethod === 'pay_at_property' ? '2px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                    color: paymentMethod === 'pay_at_property' ? '#ffffff' : 'var(--text-secondary)',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <Building size={20} color={paymentMethod === 'pay_at_property' ? '#34d399' : 'currentColor'} />
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>Pay at Check-in</span>
-                </button>
+                    gap: '0.85rem',
+                    padding: '1rem 1.25rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: `2px solid ${paymentMethod === 'upi' ? 'var(--tnau-green)' : 'var(--border-light)'}`,
+                    background: paymentMethod === 'upi' ? 'var(--tnau-green-light)' : '#fff',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}>
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="upi"
+                      checked={paymentMethod === 'upi'}
+                      onChange={() => setPaymentMethod('upi')}
+                      style={{ accentColor: 'var(--tnau-green)' }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <QrCode size={16} color="var(--tnau-green)" />
+                        <span>Direct UPI Payment (GPay, PhonePe, Paytm, BHIM)</span>
+                        <span style={{ fontSize: '0.68rem', background: 'var(--tnau-green)', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '100px', fontWeight: 700 }}>
+                          RECOMMENDED · 0% FEE
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                        Scan QR Code or tap to pay directly from your UPI app with instant booking confirmation
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Pay at Front Desk / Check-in */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.85rem',
+                    padding: '1rem 1.25rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: `2px solid ${paymentMethod === 'pay_at_property' ? 'var(--tnau-gold)' : 'var(--border-light)'}`,
+                    background: paymentMethod === 'pay_at_property' ? 'var(--tnau-gold-light)' : '#fff',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}>
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="pay_at_property"
+                      checked={paymentMethod === 'pay_at_property'}
+                      onChange={() => setPaymentMethod('pay_at_property')}
+                      style={{ accentColor: 'var(--tnau-gold)' }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Building size={16} color="var(--tnau-gold-dark)" />
+                        Pay at Reception / Front Desk
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                        Reserve room now, pay via cash / card / UPI at the guest house during check-in
+                      </div>
+                    </div>
+                  </label>
+
+                </div>
               </div>
 
-              {/* CARD PAYMENT TAB */}
-              {paymentMethod === 'card' && (
-                <div style={{
-                  padding: '1.25rem',
-                  background: 'var(--bg-surface-elevated)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-subtle)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#ffffff' }}>Credit / Debit Card</div>
-                    <div className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>256-Bit Encrypted</div>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Card Number</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                    />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div className="form-group">
-                      <label className="form-label">Expiry (MM/YY)</label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        value={cardExpiry}
-                        onChange={(e) => setCardExpiry(e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">CVV</label>
-                      <input
-                        type="password"
-                        className="form-input"
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    ℹ️ Test Mode active: Simulated instant authorization & immediate reservation locking.
-                  </div>
-                </div>
-              )}
-
-              {/* UPI QR PAYMENT TAB */}
+              {/* ── UPI Details Panel ────────────────────────────────────────── */}
               {paymentMethod === 'upi' && (
                 <div style={{
                   padding: '1.25rem',
-                  background: 'var(--bg-surface-elevated)',
-                  borderRadius: 'var(--radius-md)',
+                  background: '#ffffff',
+                  borderRadius: 'var(--radius-lg)',
                   border: '1px solid var(--border-subtle)',
-                  textAlign: 'center'
+                  boxShadow: 'var(--shadow-card)',
+                  marginBottom: '1.25rem'
                 }}>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#ffffff', marginBottom: '0.3rem' }}>
-                    Scan QR with Google Pay, PhonePe, Paytm or Any UPI App
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                    Amount to pay: <strong>{currencySymbol}{totalAmount.toLocaleString('en-IN')}</strong>
-                  </div>
+                  <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    
+                    {/* QR Code Container */}
+                    <div style={{ textAlign: 'center', background: '#f8f9fa', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+                      <img
+                        src={qrCodeUrl}
+                        alt="TNAU UPI QR Code"
+                        style={{ width: '150px', height: '150px', display: 'block', borderRadius: '6px' }}
+                      />
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.4rem', fontWeight: 600 }}>
+                        Scan using any UPI App
+                      </div>
+                    </div>
 
-                  {/* QR Code Container */}
-                  <div style={{
-                    width: '180px',
-                    height: '180px',
-                    margin: '0 auto 1rem',
-                    background: '#ffffff',
-                    padding: '10px',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.3)'
-                  }}>
-                    <img
-                      src={qrCodeUrl}
-                      alt="UPI QR Code"
-                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    />
-                  </div>
+                    {/* UPI Info & Direct Action */}
+                    <div style={{ flex: 1, minWidth: '240px' }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        TNAU Guest House UPI ID
+                      </div>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem', marginBottom: '0.75rem' }}>
+                        <code style={{
+                          fontSize: '1.05rem',
+                          fontWeight: 700,
+                          color: 'var(--tnau-green)',
+                          padding: '0.4rem 0.75rem',
+                          background: 'var(--tnau-green-light)',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(26,107,50,0.2)',
+                          letterSpacing: '0.02em'
+                        }}>
+                          {upiId}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={handleCopyUpi}
+                          className="btn btn-sm btn-outline"
+                          title="Copy UPI ID"
+                          style={{ padding: '0.4rem 0.6rem' }}
+                        >
+                          {copiedUpi ? (
+                            <><CheckCheck size={14} color="var(--tnau-green)" /> Copied</>
+                          ) : (
+                            <><Copy size={14} /> Copy</>
+                          )}
+                        </button>
+                      </div>
 
-                  {/* UPI ID with copy button */}
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.6rem',
-                    padding: '0.5rem 1rem',
-                    background: 'var(--bg-main)',
-                    borderRadius: 'var(--radius-full)',
-                    border: '1px solid var(--border-light)',
-                    marginBottom: '1rem'
-                  }}>
-                    <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>UPI ID:</span>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#34d399' }}>{upiId}</span>
-                    <button
-                      onClick={handleCopyUpi}
-                      className="btn btn-outline btn-sm"
-                      style={{ padding: '0.2rem 0.6rem', fontSize: '0.75rem', borderRadius: 'var(--radius-full)' }}
-                    >
-                      {copiedUpi ? <CheckCheck size={12} color="#34d399" /> : <Copy size={12} />}
-                      <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
-                    </button>
-                  </div>
+                      {/* Pay via UPI App button (for mobile/tablets) */}
+                      <a
+                        href={upiDeepLink}
+                        className="btn btn-sm"
+                        style={{
+                          background: 'linear-gradient(135deg, #1a6b32, #0f4a21)',
+                          color: '#ffffff',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          padding: '0.45rem 0.9rem',
+                          marginBottom: '0.85rem',
+                          fontSize: '0.82rem',
+                          borderRadius: 'var(--radius-sm)'
+                        }}
+                      >
+                        <Smartphone size={14} />
+                        <span>Open Installed UPI App to Pay</span>
+                        <ExternalLink size={12} />
+                      </a>
 
-                  <div className="form-group" style={{ maxWidth: '340px', margin: '0 auto', textAlign: 'left' }}>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>UPI Reference / UTR Number (Optional)</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g. 423987123901"
-                      value={upiRef}
-                      onChange={(e) => setUpiRef(e.target.value)}
-                    />
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                        Amount to Pay: <strong style={{ color: 'var(--tnau-green)', fontSize: '1rem' }}>{currencySymbol}{total.toLocaleString('en-IN')}</strong>
+                      </div>
+
+                      {/* Transaction Reference / UTR Input */}
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.82rem' }}>
+                          UPI Reference / UTR Number (12-digit)
+                        </label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="e.g. 423871928374 or last 4 digits"
+                          value={upiRef}
+                          onChange={(e) => setUpiRef(e.target.value)}
+                          style={{ fontSize: '0.875rem' }}
+                        />
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                          Enter the 12-digit UTR from your GPay / PhonePe / Paytm receipt (or click Confirm if paid)
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* PAY AT PROPERTY TAB */}
+              {/* ── Pay at Property Details Panel ───────────────────────────── */}
               {paymentMethod === 'pay_at_property' && (
                 <div style={{
-                  padding: '1.5rem',
-                  background: 'var(--bg-surface-elevated)',
+                  padding: '1.25rem',
+                  background: 'var(--tnau-gold-light)',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-subtle)',
-                  textAlign: 'center'
+                  border: '1px solid rgba(184,134,11,0.25)',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  gap: '0.85rem',
+                  alignItems: 'flex-start'
                 }}>
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    background: 'rgba(245, 158, 11, 0.12)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 1rem',
-                    color: '#fbbf24'
-                  }}>
-                    <Building size={24} />
+                  <Building size={24} color="var(--tnau-gold-dark)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--tnau-gold-dark)', marginBottom: '0.25rem' }}>
+                      Pay Upon Arrival at Reception
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      Your reservation will be held immediately. You can pay <strong>{currencySymbol}{total.toLocaleString('en-IN')}</strong> via cash, card, or UPI at the TNAU Guest House front desk during check-in.
+                    </div>
                   </div>
-                  <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
-                    Pay Upon Check-in at Front Desk
-                  </h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto' }}>
-                    Your room will be reserved immediately. You can settle the bill of <strong>{currencySymbol}{totalAmount.toLocaleString('en-IN')}</strong> at reception using Cash, Card, or UPI upon arrival.
-                  </p>
                 </div>
               )}
 
-              {/* Final Actions */}
-              <div style={{ marginTop: '1.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button 
-                  type="button" 
-                  onClick={() => setStep(1)} 
-                  className="btn btn-outline"
+              {/* Price Breakdown */}
+              <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: 'var(--radius-md)', fontSize: '0.875rem', marginBottom: '1.25rem', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>
+                  <span>Room Rate ({currencySymbol}{room.price_per_night.toLocaleString('en-IN')} × {nights} night{nights > 1 ? 's' : ''})</span>
+                  <span>{currencySymbol}{baseRate.toLocaleString('en-IN')}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', color: 'var(--text-secondary)' }}>
+                  <span>Tax & GST ({taxPct}%)</span>
+                  <span>{currencySymbol}{taxAmount.toLocaleString('en-IN')}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.1rem', color: 'var(--tnau-green)', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.6rem' }}>
+                  <span>Total Payable</span>
+                  <span>{currencySymbol}{total.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              {/* Automated Notification Info Strip */}
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem', padding: '0.6rem 0.8rem', background: '#f0f7f2', borderRadius: 'var(--radius-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--tnau-green)', fontWeight: 600 }}>
+                  <BadgeCheck size={14} />
+                  <span>Instant WhatsApp Voucher</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--tnau-green)', fontWeight: 600 }}>
+                  <BadgeCheck size={14} />
+                  <span>Email Confirmation</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--tnau-green)', fontWeight: 600 }}>
+                  <BadgeCheck size={14} />
+                  <span>SMS Alert</span>
+                </div>
+              </div>
+
+              {error && (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: '0.75rem 1rem', background: 'var(--accent-rose-light)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.875rem', color: 'var(--accent-rose)' }}>
+                  <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => { setStep(1); setError(''); }}
+                  className="btn btn-outline-gray"
                   disabled={loading}
                 >
-                  <ChevronLeft size={16} />
-                  <span>Back</span>
+                  <ChevronLeft size={17} /> Back
                 </button>
 
                 <button
                   type="button"
                   onClick={handleFinalBookingAndPayment}
+                  className="btn btn-primary"
                   disabled={loading}
-                  className="btn btn-primary btn-lg"
                   style={{ minWidth: '220px' }}
                 >
                   {loading ? (
-                    <>
-                      <Loader2 size={18} className="spin" />
-                      <span>Confirming Stay...</span>
-                    </>
+                    <><Loader2 size={17} style={{ animation: 'spin 1s linear infinite' }} /> Confirming…</>
+                  ) : paymentMethod === 'upi' ? (
+                    <><Check size={17} /> I Have Paid {currencySymbol}{total.toLocaleString('en-IN')}</>
                   ) : (
-                    <>
-                      <ShieldCheck size={18} />
-                      <span>
-                        {paymentMethod === 'pay_at_property' ? 'Confirm Reservation' : `Pay ${currencySymbol}${totalAmount.toLocaleString('en-IN')}`}
-                      </span>
-                    </>
+                    <><Check size={17} /> Confirm Room Reservation</>
                   )}
                 </button>
               </div>
@@ -586,16 +570,9 @@ export default function BookingModal({
           )}
 
         </div>
-
       </div>
       <style>{`
-        .spin {
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

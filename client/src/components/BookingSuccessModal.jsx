@@ -1,39 +1,39 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { 
-  CheckCircle2, MessageSquare, Printer, MapPin, 
-  Phone, Calendar, Users, Hotel, Download, Share2, Sparkles, X 
+import {
+  CheckCircle2, Printer, MapPin,
+  Phone, Mail, Calendar, Users, X,
+  BadgeCheck, Sparkles, Building2
 } from 'lucide-react';
 
 export default function BookingSuccessModal({ data, onClose }) {
   if (!data) return null;
 
-  const { booking, whatsapp, settings } = data;
+  const { booking, settings, notifications } = data;
+  const currency = settings?.currency_symbol || '₹';
 
   useEffect(() => {
-    // Trigger celebratory confetti
     confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 }
+      particleCount: 100,
+      spread: 75,
+      origin: { y: 0.55 },
+      colors: ['#1a6b32', '#b8860b', '#ffffff', '#a7f3d0']
     });
   }, []);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div 
-        className="modal-content" 
-        style={{ maxWidth: '620px', padding: 0, overflow: 'hidden' }}
+      <div
+        className="modal-content"
+        style={{ maxWidth: '580px', padding: 0, overflow: 'hidden' }}
         onClick={(e) => e.stopPropagation()}
       >
-        
-        {/* Top Header Banner */}
+
+        {/* ── Header Banner ───────────────────────────────────────────── */}
         <div style={{
-          background: 'linear-gradient(135deg, #065f46 0%, #047857 50%, #10b981 100%)',
+          background: 'linear-gradient(135deg, #1a6b32 0%, #0f4a21 60%, #1a6b32 100%)',
           padding: '2rem 1.75rem',
           textAlign: 'center',
           color: '#ffffff',
@@ -41,174 +41,112 @@ export default function BookingSuccessModal({ data, onClose }) {
         }}>
           <button
             onClick={onClose}
-            style={{
-              position: 'absolute',
-              top: '1rem',
-              right: '1rem',
-              color: 'rgba(255, 255, 255, 0.8)',
-              background: 'rgba(0, 0, 0, 0.2)',
-              borderRadius: '50%',
-              padding: '0.4rem'
-            }}
+            style={{ position: 'absolute', top: '1rem', right: '1rem', color: 'rgba(255,255,255,0.8)', background: 'rgba(0,0,0,0.2)', borderRadius: '50%', padding: '0.4rem' }}
           >
             <X size={18} />
           </button>
 
-          <div style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '50%',
-            background: '#ffffff',
-            color: '#10b981',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 1rem',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.25)'
-          }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#ffffff', color: '#1a6b32', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
             <CheckCircle2 size={38} />
           </div>
 
-          <h2 style={{ fontSize: '1.65rem', fontWeight: 800, marginBottom: '0.35rem', color: '#ffffff' }}>
-            Reservation Confirmed!
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.35rem', color: '#ffffff' }}>
+            Reservation Confirmed! 🎉
           </h2>
-          <p style={{ fontSize: '0.925rem', color: '#d1fae5', maxWidth: '420px', margin: '0 auto' }}>
-            Thank you, <strong>{booking.customer_name}</strong>. Your luxury stay has been secured.
+          <p style={{ fontSize: '0.925rem', color: '#a7f3d0', maxWidth: '420px', margin: '0 auto' }}>
+            Thank you, <strong style={{ color: '#ffffff' }}>{booking.customer_name}</strong>. Your stay at TNAU Guest House is secured.
           </p>
 
-          {/* Reference Badge */}
-          <div style={{
-            marginTop: '1.25rem',
-            display: 'inline-block',
-            padding: '0.5rem 1.25rem',
-            background: 'rgba(0, 0, 0, 0.35)',
-            backdropFilter: 'blur(8px)',
-            borderRadius: 'var(--radius-full)',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            <span style={{ fontSize: '0.8rem', color: '#a7f3d0' }}>Booking Reference: </span>
-            <strong style={{ fontSize: '1.1rem', letterSpacing: '0.08em', color: '#ffffff' }}>{booking.booking_code}</strong>
+          {/* Booking code badge */}
+          <div style={{ marginTop: '1.25rem', display: 'inline-block', padding: '0.5rem 1.5rem', background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', borderRadius: 'var(--radius-full)', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <span style={{ fontSize: '0.78rem', color: '#a7f3d0' }}>Booking Reference: </span>
+            <strong style={{ fontSize: '1.15rem', letterSpacing: '0.1em', color: '#ffffff' }}>{booking.booking_code}</strong>
           </div>
         </div>
 
-        {/* WhatsApp Notification CTA Strip */}
+        {/* ── Automated Dispatch Confirmation Strip ─────────────────────── */}
         <div style={{
-          padding: '1.25rem 1.5rem',
-          background: 'rgba(37, 211, 102, 0.12)',
-          borderBottom: '1px solid rgba(37, 211, 102, 0.25)',
+          padding: '0.85rem 1.5rem',
+          background: '#f0f7f2',
+          borderBottom: '1px solid rgba(26,107,50,0.15)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '0.75rem'
+          gap: '0.6rem'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              background: '#25D366',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff'
-            }}>
-              <MessageSquare size={20} />
-            </div>
-            <div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>WhatsApp Confirmation</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Send voucher directly to {booking.customer_phone}</div>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BadgeCheck size={16} color="var(--tnau-green)" />
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--tnau-green)' }}>
+              Confirmation sent to {booking.customer_email || booking.customer_phone}
+            </span>
           </div>
-
-          <a
-            href={whatsapp?.url || `https://api.whatsapp.com/send?phone=${booking.customer_phone}&text=Booking%20Confirmed%20${booking.booking_code}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-whatsapp"
-            style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
-          >
-            <MessageSquare size={16} />
-            <span>Open in WhatsApp</span>
-          </a>
+          <span style={{ fontSize: '0.75rem', background: 'var(--tnau-green)', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '100px', fontWeight: 600 }}>
+            AUTO-DISPATCHED
+          </span>
         </div>
 
-        {/* Voucher Receipt Body */}
-        <div style={{ padding: '1.5rem' }}>
-          
-          <div style={{
-            background: 'var(--bg-surface-elevated)',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--border-subtle)',
-            padding: '1.25rem'
-          }}>
-            
+        {/* ── Voucher Receipt Body ──────────────────────────────────────── */}
+        <div style={{ padding: '1.25rem 1.5rem' }}>
+
+          <div style={{ background: '#f8f9fa', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)', padding: '1.25rem' }}>
+
+            {/* Room + Amount */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.85rem' }}>
               <div>
-                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--accent-primary)', fontWeight: 700 }}>Reserved Room</div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff' }}>{booking.room?.name || 'Luxury Suite'}</div>
-                <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>{booking.room?.bed_type || 'King Bed'} • {booking.num_guests} Guests</div>
+                <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--tnau-green)', fontWeight: 700, letterSpacing: '0.04em' }}>Reserved Room</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{booking.room?.name || 'Reserved Room'}</div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{booking.room?.bed_type || ''} • {booking.num_guests} Guest{booking.num_guests > 1 ? 's' : ''}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span className="badge badge-emerald">
-                  {booking.payment_status === 'paid' ? 'Paid in Full' : 'Pay at Property'}
+                <span className={`badge ${booking.payment_status === 'paid' ? 'badge-emerald' : 'badge-gold'}`}>
+                  {booking.payment_status === 'paid' ? '✓ Paid' : 'Pay at Property'}
                 </span>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', marginTop: '0.3rem', fontFamily: 'var(--font-heading)' }}>
-                  {settings?.currency_symbol || '₹'}{Number(booking.total_amount).toLocaleString('en-IN')}
+                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--tnau-green)', marginTop: '0.3rem', fontFamily: 'var(--font-heading)' }}>
+                  {currency}{Number(booking.total_amount).toLocaleString('en-IN')}
                 </div>
               </div>
             </div>
 
-            {/* Check-in / Out Grid */}
+            {/* Check-in / Check-out */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>CHECK-IN</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>{booking.check_in_date}</div>
-                <div style={{ fontSize: '0.75rem', color: '#34d399' }}>From 2:00 PM</div>
+              <div style={{ padding: '0.75rem', background: '#ffffff', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Check-in</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{booking.check_in_date}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--tnau-green)', fontWeight: 600 }}>From 2:00 PM</div>
               </div>
-
-              <div style={{ padding: '0.75rem', background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>CHECK-OUT</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>{booking.check_out_date}</div>
-                <div style={{ fontSize: '0.75rem', color: '#fbbf24' }}>Until 11:00 AM</div>
-              </div>
-            </div>
-
-            {/* Hotel Location & Support */}
-            <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <MapPin size={14} color="#34d399" />
-                <span>{settings?.address || 'Beachside Road, Palolem, South Goa, India'}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Phone size={14} color="#60a5fa" />
-                <span>Support: {settings?.phone || '+91 98765 43210'}</span>
+              <div style={{ padding: '0.75rem', background: '#ffffff', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Check-out</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{booking.check_out_date}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--tnau-gold-dark)', fontWeight: 600 }}>Until 11:00 AM</div>
               </div>
             </div>
 
+            {/* Hotel Contact & Details */}
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+                <MapPin size={13} color="var(--tnau-green)" style={{ flexShrink: 0, marginTop: '1px' }} />
+                <span>{settings?.address || 'TNAU Campus, Lawley Road, Coimbatore, Tamil Nadu - 641003'}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Phone size={13} color="var(--accent-blue)" />
+                <span>Reception Support: {settings?.phone || '+91 97860 00328'}</span>
+              </div>
+            </div>
           </div>
 
           {/* Action buttons */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
-            <button
-              onClick={handlePrint}
-              className="btn btn-outline btn-sm"
-              title="Print voucher receipt"
-            >
-              <Printer size={15} />
-              <span>Print Receipt</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button onClick={handlePrint} className="btn btn-outline-gray btn-sm">
+              <Printer size={14} />
+              <span>Print Official Receipt</span>
             </button>
-
-            <button
-              onClick={onClose}
-              className="btn btn-primary"
-            >
-              <span>Back to Home</span>
+            <button onClick={onClose} className="btn btn-primary">
+              Done
             </button>
           </div>
 
         </div>
-
       </div>
     </div>
   );

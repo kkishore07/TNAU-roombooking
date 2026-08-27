@@ -1,16 +1,23 @@
+/**
+ * payments.js
+ * Free & Direct Payment Processing (UPI QR, UPI Intent, Pay at Property)
+ * No 3rd-party payment gateway or transaction fees needed.
+ */
+
 import express from 'express';
 import db from '../db.js';
+import { sendBookingNotifications } from '../services/notifications.js';
 
 const router = express.Router();
 
-// POST /api/payments/process - Process or verify payment
+// ─── POST /api/payments/process ──────────────────────────────────────────────
+// Record payment reference, update booking payment status, and trigger notifications
 router.post('/process', async (req, res) => {
   try {
     const {
       booking_id,
       amount,
-      payment_method, // 'card', 'upi', 'razorpay', 'stripe', 'pay_at_property'
-      card_number,
+      payment_method, // 'upi', 'pay_at_property', 'bank_transfer'
       upi_reference,
       gateway_payment_id
     } = req.body;
@@ -19,40 +26,43 @@ router.post('/process', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Amount is required' });
     }
 
-    // Generate a unique transaction ID
-    const transactionId = gateway_payment_id || upi_reference || `TXN_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const transactionId = upi_reference || gateway_payment_id
+      || `UPI_${Date.now()}_${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
-    // If booking_id provided, update database
+    let booking = null;
+    let notifications = { email: { sent: false }, sms: { sent: false } };
+
     if (booking_id) {
-      const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(booking_id);
-      if (booking) {
+      const existing = db.prepare('SELECT * FROM bookings WHERE id = ?').get(booking_id);
+      if (existing) {
+        const isPaid = payment_method !== 'pay_at_property';
         db.prepare(`
           UPDATE bookings SET
-            payment_status = ?,
-            payment_method = ?,
+            payment_status    = ?,
+            payment_method    = ?,
             payment_reference = ?
           WHERE id = ?
-        `).run(
-          payment_method === 'pay_at_property' ? 'pending' : 'paid',
-          payment_method || 'card',
-          transactionId,
-          booking_id
-        );
+        `).run(isPaid ? 'paid' : 'pending', payment_method || 'upi', transactionId, booking_id);
+
+        booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(booking_id);
+        const room     = booking?.room_id ? db.prepare('SELECT * FROM rooms WHERE id = ?').get(booking.room_id) : null;
+        const settings = db.prepare('SELECT * FROM settings WHERE id = ?').get('general') || {};
+        
+        // Trigger automated Email + SMS
+        notifications  = await sendBookingNotifications(booking, room, settings);
       }
     }
 
-    // Simulate real gateway processing latency for realistic UX
-    await new Promise(resolve => setTimeout(resolve, 800));
-
     res.json({
       success: true,
-      message: 'Payment processed successfully',
+      message: 'Payment details recorded successfully',
       data: {
         transaction_id: transactionId,
-        amount: parseFloat(amount),
-        status: payment_method === 'pay_at_property' ? 'pending' : 'paid',
-        payment_method: payment_method || 'card',
-        timestamp: new Date().toISOString()
+        amount:         parseFloat(amount),
+        status:         payment_method === 'pay_at_property' ? 'pending' : 'paid',
+        payment_method: payment_method || 'upi',
+        timestamp:      new Date().toISOString(),
+        notifications
       }
     });
   } catch (error) {
@@ -61,22 +71,22 @@ router.post('/process', async (req, res) => {
   }
 });
 
-// GET /api/payments/config - Get active payment methods & settings (UPI ID, merchant name, currency)
+// ─── GET /api/payments/config ─────────────────────────────────────────────────
+// Returns UPI details & active payment options from settings
 router.get('/config', (req, res) => {
   try {
     const settings = db.prepare('SELECT * FROM settings WHERE id = ?').get('general') || {};
+
     res.json({
       success: true,
       data: {
-        currency_symbol: settings.currency_symbol || '₹',
-        currency_code: settings.currency_code || 'INR',
-        upi_id: settings.upi_id || 'hotelstay@upi',
-        upi_merchant_name: settings.upi_merchant_name || 'Serenity Haven Luxury Retreat',
-        tax_percentage: settings.tax_percentage || 12.0,
+        currency_symbol:       settings.currency_symbol || '₹',
+        currency_code:         settings.currency_code   || 'INR',
+        upi_id:                settings.upi_id          || '9786000328@fam',
+        upi_merchant_name:     settings.upi_merchant_name || settings.hotel_name || 'TNAU Guest House',
+        tax_percentage:        settings.tax_percentage  || 12.0,
         gateways: {
-          test_mode: true,
-          upi_enabled: true,
-          cards_enabled: true,
+          upi_enabled:             true,
           pay_at_property_enabled: true
         }
       }

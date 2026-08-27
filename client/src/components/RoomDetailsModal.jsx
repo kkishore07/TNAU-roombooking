@@ -29,7 +29,7 @@ export default function RoomDetailsModal({ room, onClose, onBookNow, currencySym
             <span className="badge badge-emerald" style={{ marginBottom: '0.35rem' }}>
               {room.category}
             </span>
-            <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#ffffff' }}>
+            <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               {room.name}
             </h2>
           </div>
@@ -56,7 +56,7 @@ export default function RoomDetailsModal({ room, onClose, onBookNow, currencySym
             borderRadius: 'var(--radius-lg)',
             overflow: 'hidden',
             marginBottom: '0.75rem',
-            background: '#000000'
+            background: '#f1f5f9'
           }}>
             <img 
               src={activeImage} 
@@ -79,7 +79,7 @@ export default function RoomDetailsModal({ room, onClose, onBookNow, currencySym
                     overflow: 'hidden',
                     cursor: 'pointer',
                     flexShrink: 0,
-                    border: activeImage === img ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                    border: activeImage === img ? '2px solid var(--tnau-green)' : '2px solid var(--border-light)',
                     opacity: activeImage === img ? 1 : 0.65,
                     transition: 'all 0.2s'
                   }}
@@ -95,38 +95,38 @@ export default function RoomDetailsModal({ room, onClose, onBookNow, currencySym
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
             gap: '0.75rem',
-            padding: '1rem',
-            background: 'var(--bg-surface-elevated)',
+            padding: '1rem 1.25rem',
+            background: '#f8f9fa',
             borderRadius: 'var(--radius-md)',
             marginBottom: '1.5rem',
             border: '1px solid var(--border-subtle)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <Users size={18} color="#34d399" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <Users size={20} color="var(--tnau-green)" style={{ flexShrink: 0 }} />
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Max Guests</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#ffffff' }}>{room.capacity} Persons</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Max Guests</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{room.capacity} Persons</div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <Bed size={18} color="#60a5fa" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <Bed size={20} color="var(--accent-blue)" style={{ flexShrink: 0 }} />
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Bed Type</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#ffffff' }}>{room.bed_type || 'King Bed'}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Bed Type</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{room.bed_type || 'King Bed'}</div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <Maximize size={18} color="#fbbf24" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <Maximize size={20} color="var(--tnau-gold)" style={{ flexShrink: 0 }} />
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Room Size</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#ffffff' }}>{room.room_size || '450 sq ft'}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Room Size</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{room.room_size || '450 sq ft'}</div>
               </div>
             </div>
           </div>
 
           {/* Description */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.5rem', color: '#ffffff' }}>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
               About This Room
             </h4>
             <p style={{ fontSize: '0.925rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
@@ -136,14 +136,14 @@ export default function RoomDetailsModal({ room, onClose, onBookNow, currencySym
 
           {/* Full Amenities */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.75rem', color: '#ffffff' }}>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
               Amenities & Inclusions
             </h4>
             <div className="amenities-grid">
               {amenities.map((amenity, idx) => (
-                <div key={idx} className="amenity-chip">
-                  <CheckCircle2 size={14} />
-                  <span>{amenity}</span>
+                <div key={idx} className="amenity-chip" style={{ background: 'var(--tnau-green-light)', color: 'var(--tnau-green-dark)', border: '1px solid rgba(26,107,50,0.15)' }}>
+                  <CheckCircle2 size={14} color="var(--tnau-green)" />
+                  <span style={{ fontWeight: 600 }}>{amenity}</span>
                 </div>
               ))}
             </div>
@@ -153,19 +153,19 @@ export default function RoomDetailsModal({ room, onClose, onBookNow, currencySym
           <div style={{
             padding: '1rem 1.25rem',
             borderRadius: 'var(--radius-md)',
-            background: 'rgba(59, 130, 246, 0.06)',
-            border: '1px solid rgba(59, 130, 246, 0.15)',
+            background: 'var(--tnau-green-light)',
+            border: '1px solid rgba(26, 107, 50, 0.15)',
             marginBottom: '1rem',
             fontSize: '0.85rem'
           }}>
-            <div style={{ fontWeight: 600, color: '#93c5fd', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ fontWeight: 700, color: 'var(--tnau-green)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <Clock size={15} />
               <span>Check-in / Check-out & Booking Policies</span>
             </div>
             <ul style={{ color: 'var(--text-secondary)', paddingLeft: '1.2rem', lineHeight: 1.6 }}>
               <li><strong>Check-in:</strong> From 2:00 PM onwards</li>
               <li><strong>Check-out:</strong> Until 11:00 AM</li>
-              <li><strong>Zero Login Required:</strong> Instant confirmation sent directly to your WhatsApp.</li>
+              <li><strong>Zero Login Required:</strong> Instant automated email voucher sent directly to your inbox.</li>
               <li><strong>Identification:</strong> Valid government ID is required at check-in.</li>
             </ul>
           </div>
@@ -173,23 +173,23 @@ export default function RoomDetailsModal({ room, onClose, onBookNow, currencySym
         </div>
 
         {/* Modal Footer with Live Pricing & Reserve CTA */}
-        <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
+        <div className="modal-footer" style={{ justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)' }}>
           <div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               {nights} Night(s) Stay • {checkIn ? `${checkIn} to ${checkOut}` : 'Select dates to book'}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
-              <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--tnau-green)', fontFamily: 'var(--font-heading)' }}>
                 {currencySymbol}{Number(totalPrice).toLocaleString('en-IN')}
               </span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                 (includes {currencySymbol}{tax} taxes)
               </span>
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={onClose} className="btn btn-outline btn-sm">
+            <button onClick={onClose} className="btn btn-outline-gray btn-sm">
               Close
             </button>
             <button

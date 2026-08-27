@@ -103,20 +103,35 @@ export function initDB() {
         currency_symbol, currency_code, tax_percentage, admin_pin, upi_id, upi_merchant_name, whatsapp_template
       ) VALUES (
         'general',
-        'Serenity Haven Luxury Villas & Suites',
-        'Experience Unmatched Serenity & Coastal Luxury',
-        'Beachside Road, Palolem, South Goa, India - 403702',
-        '+91 98765 43210',
-        'bookings@serenityhaven.com',
-        '+919876543210',
+        'TNAU Guest House',
+        'Tamil Nadu Agricultural University Guest House & VIP Residency',
+        'TNAU Campus, Lawley Road, Coimbatore, Tamil Nadu - 641003',
+        '+91 97860 00328',
+        'guesthouse@tnau.ac.in',
+        '9786000328',
         '₹',
         'INR',
         12.0,
         '1234',
-        'serenityhaven@okaxis',
-        'Serenity Haven Retreat',
-        '🌟 *Booking Confirmation - Serenity Haven* 🌟\n\nDear *{customer_name}*,\nYour booking has been *CONFIRMED*!\n\n📋 *Booking Ref:* {booking_code}\n🏨 *Room:* {room_name}\n📅 *Check-in:* {check_in_date} (from 2:00 PM)\n📅 *Check-out:* {check_out_date} (until 11:00 AM)\n👥 *Guests:* {num_guests}\n💳 *Total Amount:* {currency_symbol}{total_amount} ({payment_status})\n\n📍 *Location & Map:* {hotel_address}\n📞 *Front Desk / Support:* {hotel_phone}\n\nWe look forward to hosting you for a memorable stay!'
+        '9786000328@fam',
+        'TNAU Guest House',
+        '🌟 *Booking Confirmation - TNAU Guest House* 🌟\n\nDear *{customer_name}*,\nYour room reservation is *CONFIRMED*!\n\n📋 *Booking Ref:* {booking_code}\n🏨 *Room:* {room_name}\n📅 *Check-in:* {check_in_date} (from 2:00 PM)\n📅 *Check-out:* {check_out_date} (until 11:00 AM)\n👥 *Guests:* {num_guests}\n💳 *Total Amount:* {currency_symbol}{total_amount} ({payment_status})\n\n📍 *Location:* {hotel_address}\n📞 *Front Desk / Support:* {hotel_phone}\n\nThank you for choosing TNAU Guest House!'
       )
+    `).run();
+  }
+
+  // Update existing settings row if it still has placeholder name
+  const currentGeneral = db.prepare('SELECT * FROM settings WHERE id = ?').get('general');
+  if (currentGeneral && currentGeneral.hotel_name.includes('Serenity')) {
+    db.prepare(`
+      UPDATE settings SET
+        hotel_name = 'TNAU Guest House',
+        tagline = 'Tamil Nadu Agricultural University Guest House & VIP Residency',
+        address = 'TNAU Campus, Lawley Road, Coimbatore, Tamil Nadu - 641003',
+        upi_merchant_name = 'TNAU Guest House',
+        upi_id = '9786000328@fam',
+        whatsapp_template = '🌟 *Booking Confirmation - TNAU Guest House* 🌟\n\nDear *{customer_name}*,\nYour room reservation is *CONFIRMED*!\n\n📋 *Booking Ref:* {booking_code}\n🏨 *Room:* {room_name}\n📅 *Check-in:* {check_in_date} (from 2:00 PM)\n📅 *Check-out:* {check_out_date} (until 11:00 AM)\n👥 *Guests:* {num_guests}\n💳 *Total Amount:* {currency_symbol}{total_amount} ({payment_status})\n\n📍 *Location:* {hotel_address}\n📞 *Front Desk / Support:* {hotel_phone}\n\nThank you for choosing TNAU Guest House!'
+      WHERE id = 'general'
     `).run();
   }
 

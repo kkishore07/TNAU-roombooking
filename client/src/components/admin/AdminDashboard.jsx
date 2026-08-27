@@ -123,15 +123,27 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
   };
 
   // Status Updater
-  const handleUpdateBookingStatus = async (bookingId, newStatus) => {
+  const handleUpdateBookingStatus = async (id, newStatus) => {
     try {
-      const res = await updateBookingStatus(bookingId, { booking_status: newStatus });
+      const res = await updateBookingStatus(id, { booking_status: newStatus });
       if (res.success) {
         setMsg({ type: 'success', text: `Booking marked as ${newStatus}` });
         loadData();
       }
     } catch (err) {
       setMsg({ type: 'error', text: 'Error updating status' });
+    }
+  };
+
+  const handleUpdatePaymentStatus = async (id, newPaymentStatus) => {
+    try {
+      const res = await updateBookingStatus(id, { payment_status: newPaymentStatus });
+      if (res.success) {
+        setMsg({ type: 'success', text: `Payment marked as ${newPaymentStatus}` });
+        loadData();
+      }
+    } catch (err) {
+      setMsg({ type: 'error', text: 'Error updating payment status' });
     }
   };
 
@@ -760,9 +772,10 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                     <div
                       key={booking.id}
                       style={{
-                        background: 'var(--bg-surface-elevated)',
+                        background: '#ffffff',
                         borderRadius: 'var(--radius-md)',
-                        border: '1px solid var(--border-subtle)',
+                        border: '1px solid var(--border-light)',
+                        boxShadow: 'var(--shadow-card)',
                         padding: '1.25rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -771,30 +784,35 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                         gap: '1rem'
                       }}
                     >
-                      <div style={{ flex: '1 1 300px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
-                          <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff' }}>{booking.customer_name}</span>
-                          <span className="badge badge-emerald">{booking.booking_status}</span>
-                          <span className="badge badge-slate">{booking.payment_status}</span>
+                      <div style={{ flex: '1 1 320px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>{booking.customer_name}</span>
+                          <span className={`badge ${booking.booking_status === 'confirmed' ? 'badge-emerald' : 'badge-gold'}`}>{booking.booking_status}</span>
+                          <span className={`badge ${booking.payment_status === 'paid' ? 'badge-emerald' : 'badge-rose'}`}>{booking.payment_status}</span>
                         </div>
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          <strong>{booking.room_name}</strong> • Ref: <span style={{ color: '#a7f3d0' }}>{booking.booking_code}</span>
+                          <strong>{booking.room_name}</strong> • Ref: <span style={{ color: 'var(--tnau-green)', fontWeight: 700 }}>{booking.booking_code}</span>
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                           📅 {booking.check_in_date} → {booking.check_out_date} ({booking.num_nights} nights) • 👥 {booking.num_guests} Guests • 📞 {booking.customer_phone}
                         </div>
+                        {booking.payment_reference && (
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.35rem', background: 'var(--tnau-green-light)', padding: '0.2rem 0.5rem', borderRadius: '4px', display: 'inline-block' }}>
+                            💳 UTR / Ref: <strong style={{ color: 'var(--tnau-green)' }}>{booking.payment_reference}</strong> ({booking.payment_method?.toUpperCase()})
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#34d399', fontFamily: 'var(--font-heading)' }}>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tnau-green)', fontFamily: 'var(--font-heading)' }}>
                           {currencySymbol}{Number(booking.total_amount).toLocaleString('en-IN')}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          via {booking.payment_method?.toUpperCase()}
+                          Method: {booking.payment_method?.toUpperCase()}
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
                           onClick={() => handleOpenWhatsApp(booking)}
                           className="btn btn-whatsapp btn-sm"
@@ -804,11 +822,26 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                           <span>WhatsApp</span>
                         </button>
 
+                        {/* Quick Payment Status Toggle */}
+                        <select
+                          className="form-select"
+                          value={booking.payment_status}
+                          onChange={(e) => handleUpdatePaymentStatus(booking.id, e.target.value)}
+                          style={{ height: '34px', fontSize: '0.8rem', width: '110px' }}
+                          title="Payment Status"
+                        >
+                          <option value="paid">✓ Paid</option>
+                          <option value="pending">⏳ Pending</option>
+                          <option value="refunded">Refunded</option>
+                        </select>
+
+                        {/* Booking Status */}
                         <select
                           className="form-select"
                           value={booking.booking_status}
                           onChange={(e) => handleUpdateBookingStatus(booking.id, e.target.value)}
                           style={{ height: '34px', fontSize: '0.8rem', width: '130px' }}
+                          title="Stay Status"
                         >
                           <option value="confirmed">Confirmed</option>
                           <option value="checked_in">Checked In</option>

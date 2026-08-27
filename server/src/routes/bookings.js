@@ -2,6 +2,7 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db.js';
 import { getRoomAvailability } from './rooms.js';
+import { sendBookingNotifications } from '../services/notifications.js';
 
 const router = express.Router();
 
@@ -38,7 +39,7 @@ export function buildWhatsAppMessage(booking, room, settings) {
 }
 
 // POST /api/bookings - Create guest reservation (NO LOGIN REQUIRED)
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const {
       room_id,
@@ -143,6 +144,16 @@ router.post('/', (req, res) => {
       settings
     );
 
+    // Send email + SMS notifications (non-blocking, don't fail booking on notification error)
+    let notifications = { email: { sent: false }, sms: { sent: false } };
+    if (payment_method !== 'pay_at_property') {
+      // For online/UPI payments, send notifications immediately
+      notifications = await sendBookingNotifications(createdBooking, room, settings);
+    } else {
+      // For pay-at-property, still send but mark as pending
+      notifications = await sendBookingNotifications(createdBooking, room, settings);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Booking confirmed successfully!',
@@ -162,6 +173,7 @@ router.post('/', (req, res) => {
           message: whatsappMessage,
           url: whatsappUrl
         },
+        notifications,
         settings: {
           hotel_name: settings.hotel_name,
           phone: settings.phone,

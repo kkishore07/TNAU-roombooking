@@ -1,10 +1,9 @@
 import React from 'react';
-import { Search, ShieldCheck, MessageCircle, CalendarCheck } from 'lucide-react';
+import { Search, CalendarCheck } from 'lucide-react';
 import tnauLogo from '../assets/tnau_logo.png';
 
-export default function Navbar({ onOpenFindBooking, onOpenAdmin, settings, onScrollToRooms }) {
+export default function Navbar({ onOpenFindBooking, settings, onScrollToRooms }) {
   const hotelName = settings?.hotel_name || 'TNAU Guest House';
-  const whatsappNumber = (settings?.whatsapp_number || '+919876543210').replace(/[^0-9]/g, '');
 
   return (
     <header className="glass-nav" style={{ position: 'sticky', top: 0, zIndex: 100 }}>
@@ -66,38 +65,11 @@ export default function Navbar({ onOpenFindBooking, onOpenAdmin, settings, onScr
 
           <button 
             onClick={onOpenFindBooking}
-            className="btn btn-secondary btn-sm"
+            className="btn btn-primary btn-sm"
             title="Lookup your reservation"
           >
-            <CalendarCheck size={15} color="var(--tnau-green)" />
+            <CalendarCheck size={15} />
             <span className="nav-btn-text">My Booking</span>
-          </button>
-
-          <a 
-            href={`https://api.whatsapp.com/send?phone=${whatsappNumber}&text=Hello%20${encodeURIComponent(hotelName)},%20I%20have%20an%20inquiry%20regarding%20room%20booking.`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-whatsapp btn-sm"
-            title="Chat with Reception"
-          >
-            <MessageCircle size={15} />
-            <span className="nav-btn-text">WhatsApp</span>
-          </a>
-
-          <button 
-            onClick={onOpenAdmin}
-            className="btn btn-sm"
-            style={{
-              borderRadius: 'var(--radius-sm)',
-              border: '1.5px solid rgba(184, 134, 11, 0.4)',
-              color: 'var(--tnau-gold-dark)',
-              background: 'rgba(184, 134, 11, 0.07)',
-              fontWeight: 600
-            }}
-            title="Owner & Manager Login"
-          >
-            <ShieldCheck size={15} />
-            <span className="nav-btn-text">Admin</span>
           </button>
 
         </div>

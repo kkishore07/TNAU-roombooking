@@ -56,6 +56,26 @@ export async function processPayment(paymentData) {
   return handleResponse(res);
 }
 
+// Create a Razorpay order on the server — returns order_id + key_id
+export async function createRazorpayOrder(orderData) {
+  const res = await fetch(`${API_BASE}/payments/create-order`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(orderData)
+  });
+  return handleResponse(res);
+}
+
+// Verify Razorpay payment signature after successful checkout
+export async function verifyRazorpayPayment(verifyData) {
+  const res = await fetch(`${API_BASE}/payments/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(verifyData)
+  });
+  return handleResponse(res);
+}
+
 export async function fetchPaymentConfig() {
   const res = await fetch(`${API_BASE}/payments/config`);
   return handleResponse(res);
