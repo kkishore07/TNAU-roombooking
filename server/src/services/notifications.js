@@ -14,8 +14,8 @@ import axios from 'axios';
 // ─── Email Transport ─────────────────────────────────────────────────────────
 
 function createTransporter() {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+  const user = process.env.GMAIL_USER?.trim();
+  const pass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
 
   if (!user || !pass || user.includes('your_email')) {
     return null; // Not configured
@@ -24,9 +24,9 @@ function createTransporter() {
   return nodemailer.createTransport({
     service: 'gmail',
     auth: { user, pass },
-    connectionTimeout: 3000,
-    greetingTimeout: 3000,
-    socketTimeout: 3000
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000
   });
 }
 
@@ -151,12 +151,6 @@ function buildEmailHTML(booking, room, settings) {
 
 export async function sendEmailConfirmation(booking, room, settings) {
   try {
-    const transporter = createTransporter();
-    if (!transporter) {
-      console.log('📧 Email: Not configured (set GMAIL_USER + GMAIL_APP_PASSWORD in .env)');
-      return { sent: false, reason: 'not_configured' };
-    }
-
     const customerEmail = booking.customer_email?.trim();
     if (!customerEmail || !customerEmail.includes('@')) {
       console.log('📧 Email: No valid customer email provided');
@@ -166,6 +160,43 @@ export async function sendEmailConfirmation(booking, room, settings) {
     const hotelName = settings?.hotel_name || 'Guest House';
     const html = buildEmailHTML(booking, room, settings);
 
+    // 1. Check if RESEND_API_KEY is configured (HTTPS Port 443 - 100% reliable, no SMTP port block)
+    const resendApiKey = process.env.RESEND_API_KEY?.trim();
+    if (resendApiKey) {
+      try {
+        const fromEmail = process.env.RESEND_FROM_EMAIL || 'TNAU Guest House <onboarding@resend.dev>';
+        const res = await axios.post(
+          'https://api.resend.com/emails',
+          {
+            from: fromEmail,
+            to: [customerEmail],
+            subject: `✅ Booking Confirmed – ${booking.booking_code} | ${hotelName}`,
+            html
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${resendApiKey}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 8000
+          }
+        );
+        if (res.status === 200 || res.status === 201) {
+          console.log(`📧 Email sent via Resend API to ${customerEmail}`);
+          return { sent: true, to: customerEmail, provider: 'resend' };
+        }
+      } catch (resendErr) {
+        console.error('📧 Resend API error:', resendErr.response?.data || resendErr.message);
+      }
+    }
+
+    // 2. Fallback to Gmail SMTP (Nodemailer)
+    const transporter = createTransporter();
+    if (!transporter) {
+      console.log('📧 Email: Not configured (set GMAIL_USER + GMAIL_APP_PASSWORD in .env)');
+      return { sent: false, reason: 'not_configured' };
+    }
+
     await transporter.sendMail({
       from: `"${hotelName}" <${process.env.GMAIL_USER}>`,
       to: customerEmail,
@@ -174,8 +205,8 @@ export async function sendEmailConfirmation(booking, room, settings) {
       text: `Booking Confirmed!\n\nDear ${booking.customer_name},\nYour booking ${booking.booking_code} is confirmed.\nCheck-in: ${booking.check_in_date}\nCheck-out: ${booking.check_out_date}\nTotal: ${settings?.currency_symbol || '₹'}${booking.total_amount}\n\nThank you, ${hotelName}`
     });
 
-    console.log(`📧 Email sent to ${customerEmail} for booking ${booking.booking_code}`);
-    return { sent: true, to: customerEmail };
+    console.log(`📧 Email sent via Gmail SMTP to ${customerEmail} for booking ${booking.booking_code}`);
+    return { sent: true, to: customerEmail, provider: 'gmail_smtp' };
   } catch (err) {
     console.error('📧 Email send error:', err.message);
     return { sent: false, reason: err.message };
@@ -228,11 +259,12 @@ export async function sendSMSConfirmation(booking, settings) {
       return { sent: true, to: mobile };
     } else {
       console.warn('📱 SMS: Fast2SMS response:', response.data);
-      return { sent: false, reason: JSON.stringify(response.data) };
+      return { sent: false, reason: response.data?.message || JSON.stringify(response.data) };
     }
   } catch (err) {
-    console.error('📱 SMS send error:', err.message);
-    return { sent: false, reason: err.message };
+    const errorMsg = err.response?.data?.message || err.message;
+    console.error('📱 SMS send error:', errorMsg);
+    return { sent: false, reason: errorMsg };
   }
 }
 
