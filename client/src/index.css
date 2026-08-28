@@ -250,6 +250,17 @@ input, select, textarea {
   color: #ffffff;
 }
 
+.btn-outline-danger {
+  background: transparent;
+  color: var(--accent-rose);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+}
+
+.btn-outline-danger:hover {
+  background: var(--accent-rose-light);
+  border-color: var(--accent-rose);
+}
+
 .btn-sm {
   padding: 0.42rem 0.85rem;
   font-size: 0.815rem;

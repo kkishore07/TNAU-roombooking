@@ -47,6 +47,15 @@ export async function lookupBookingsByPhone(phone) {
   return handleResponse(res);
 }
 
+export async function cancelBooking(identifier, options = {}) {
+  const res = await fetch(`${API_BASE}/bookings/${identifier}/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(options)
+  });
+  return handleResponse(res);
+}
+
 export async function processPayment(paymentData) {
   const res = await fetch(`${API_BASE}/payments/process`, {
     method: 'POST',

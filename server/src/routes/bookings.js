@@ -355,7 +355,80 @@ router.patch('/:id/status', (req, res) => {
   }
 });
 
-// DELETE /api/bookings/:id - Cancel or delete booking
+// POST /api/bookings/:identifier/cancel - Customer self-cancellation
+router.post('/:identifier/cancel', (req, res) => {
+  try {
+    const { identifier } = req.params;
+    const { reason, phone } = req.body;
+
+    const booking = db.prepare(`
+      SELECT b.*, r.name as room_name, r.category as room_category
+      FROM bookings b
+      LEFT JOIN rooms r ON b.room_id = r.id
+      WHERE b.id = ? OR b.booking_code = ?
+    `).get(identifier, identifier);
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking reservation not found' });
+    }
+
+    if (booking.booking_status === 'cancelled') {
+      return res.status(400).json({ success: false, message: 'This booking is already cancelled.' });
+    }
+
+    if (booking.booking_status === 'checked_out') {
+      return res.status(400).json({ success: false, message: 'Completed / checked-out bookings cannot be cancelled.' });
+    }
+
+    // Optional phone number check if provided for extra verification
+    if (phone) {
+      const cleanInput = phone.replace(/[^0-9]/g, '');
+      const cleanBookingPhone = (booking.customer_phone || '').replace(/[^0-9]/g, '');
+      if (cleanInput && !cleanBookingPhone.includes(cleanInput) && !cleanInput.includes(cleanBookingPhone)) {
+        return res.status(403).json({ success: false, message: 'Phone number does not match this reservation.' });
+      }
+    }
+
+    const cancelReason = reason ? `Customer Cancellation: ${reason}` : 'Cancelled by customer';
+    const notes = booking.special_requests 
+      ? `${booking.special_requests} | [${cancelReason}]`
+      : cancelReason;
+
+    // Update status to cancelled and payment_status if pending
+    db.prepare(`
+      UPDATE bookings SET
+        booking_status = 'cancelled',
+        special_requests = ?
+      WHERE id = ?
+    `).run(notes, booking.id);
+
+    const updated = db.prepare(`
+      SELECT b.*, r.name as room_name, r.category as room_category
+      FROM bookings b
+      LEFT JOIN rooms r ON b.room_id = r.id
+      WHERE b.id = ?
+    `).get(booking.id);
+
+    res.json({
+      success: true,
+      message: `Reservation ${booking.booking_code} has been cancelled successfully.`,
+      data: {
+        booking: {
+          ...updated,
+          room: {
+            name: updated.room_name,
+            category: updated.room_category
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error cancelling booking:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// DELETE /api/bookings/:id - Cancel or delete booking (Admin)
 router.delete('/:id', (req, res) => {
   try {
     const { id } = req.params;
