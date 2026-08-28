@@ -100,24 +100,8 @@ export default function BookingModal({
         throw new Error(result.message || 'Failed to confirm booking');
       }
 
-      const booking = result.data.booking;
-
-      // 2. Process / record payment reference
-      const paymentRes = await processPayment({
-        booking_id:     booking.id,
-        amount:         total,
-        payment_method: paymentMethod,
-        upi_reference:  paymentMethod === 'upi' ? (upiRef.trim() || `UPI_${Date.now()}`) : undefined
-      });
-
-      // 3. Attach notifications info to response data if available
-      const finalData = {
-        ...result.data,
-        notifications: paymentRes?.data?.notifications || result.data?.notifications
-      };
-
-      // 4. Pass full booking data to success modal
-      onBookingSuccess(finalData);
+      // Pass full booking data to success modal immediately
+      onBookingSuccess(result.data);
 
     } catch (err) {
       console.error('Booking submission error:', err);

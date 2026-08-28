@@ -23,7 +23,10 @@ function createTransporter() {
 
   return nodemailer.createTransport({
     service: 'gmail',
-    auth: { user, pass }
+    auth: { user, pass },
+    connectionTimeout: 3000,
+    greetingTimeout: 3000,
+    socketTimeout: 3000
   });
 }
 

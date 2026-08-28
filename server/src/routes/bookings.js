@@ -144,15 +144,12 @@ router.post('/', async (req, res) => {
       settings
     );
 
-    // Send email + SMS notifications (non-blocking, don't fail booking on notification error)
-    let notifications = { email: { sent: false }, sms: { sent: false } };
-    if (payment_method !== 'pay_at_property') {
-      // For online/UPI payments, send notifications immediately
-      notifications = await sendBookingNotifications(createdBooking, room, settings);
-    } else {
-      // For pay-at-property, still send but mark as pending
-      notifications = await sendBookingNotifications(createdBooking, room, settings);
-    }
+    // Send email + SMS notifications asynchronously in the background (fire-and-forget, zero wait time)
+    setImmediate(() => {
+      sendBookingNotifications(createdBooking, room, settings).catch(err => {
+        console.error('Background notification error:', err.message);
+      });
+    });
 
     res.status(201).json({
       success: true,
@@ -173,7 +170,6 @@ router.post('/', async (req, res) => {
           message: whatsappMessage,
           url: whatsappUrl
         },
-        notifications,
         settings: {
           hotel_name: settings.hotel_name,
           phone: settings.phone,

@@ -48,8 +48,12 @@ router.post('/process', async (req, res) => {
         const room     = booking?.room_id ? db.prepare('SELECT * FROM rooms WHERE id = ?').get(booking.room_id) : null;
         const settings = db.prepare('SELECT * FROM settings WHERE id = ?').get('general') || {};
         
-        // Trigger automated Email + SMS
-        notifications  = await sendBookingNotifications(booking, room, settings);
+        // Trigger automated Email + SMS in background
+        setImmediate(() => {
+          sendBookingNotifications(booking, room, settings).catch(err => {
+            console.error('Background notification error in payments:', err.message);
+          });
+        });
       }
     }
 
@@ -61,8 +65,7 @@ router.post('/process', async (req, res) => {
         amount:         parseFloat(amount),
         status:         payment_method === 'pay_at_property' ? 'pending' : 'paid',
         payment_method: payment_method || 'upi',
-        timestamp:      new Date().toISOString(),
-        notifications
+        timestamp:      new Date().toISOString()
       }
     });
   } catch (error) {
