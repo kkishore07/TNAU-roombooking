@@ -3,7 +3,7 @@ import confetti from 'canvas-confetti';
 import {
   CheckCircle2, Printer, MapPin,
   Phone, Mail, Calendar, Users, X,
-  BadgeCheck, Sparkles, Building2
+  BadgeCheck, Sparkles, Building2, MessageSquare
 } from 'lucide-react';
 
 export default function BookingSuccessModal({ data, onClose }) {
@@ -64,7 +64,7 @@ export default function BookingSuccessModal({ data, onClose }) {
           </div>
         </div>
 
-        {/* ── Automated Dispatch Confirmation Strip ─────────────────────── */}
+        {/* ── Email Receipt Confirmation Strip ───────────────────────────── */}
         <div style={{
           padding: '0.85rem 1.5rem',
           background: '#f0f7f2',
@@ -78,11 +78,11 @@ export default function BookingSuccessModal({ data, onClose }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <BadgeCheck size={16} color="var(--tnau-green)" />
             <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--tnau-green)' }}>
-              Confirmation sent to {booking.customer_email || booking.customer_phone}
+              {booking.customer_email ? `Email receipt sent to ${booking.customer_email}` : 'Official booking voucher confirmed'}
             </span>
           </div>
           <span style={{ fontSize: '0.75rem', background: 'var(--tnau-green)', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '100px', fontWeight: 600 }}>
-            AUTO-DISPATCHED
+            EMAIL CONFIRMED
           </span>
         </div>
 
@@ -113,7 +113,7 @@ export default function BookingSuccessModal({ data, onClose }) {
               <div style={{ padding: '0.75rem', background: '#ffffff', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Check-in</div>
                 <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{booking.check_in_date}</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--tnau-green)', fontWeight: 600 }}>From 2:00 PM</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--tnau-green)', fontWeight: 600 }}>From {booking.check_in_time || '2:00 PM'}</div>
               </div>
               <div style={{ padding: '0.75rem', background: '#ffffff', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Check-out</div>
@@ -135,8 +135,37 @@ export default function BookingSuccessModal({ data, onClose }) {
             </div>
           </div>
 
+          {/* WhatsApp Direct Voucher Button */}
+          {data.whatsapp?.url && (
+            <a
+              href={data.whatsapp.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.6rem',
+                width: '100%',
+                padding: '0.85rem 1.25rem',
+                background: 'linear-gradient(135deg, #25D366, #128C7E)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                borderRadius: 'var(--radius-md)',
+                textDecoration: 'none',
+                marginTop: '1.25rem',
+                boxShadow: '0 4px 14px rgba(37, 211, 102, 0.35)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <MessageSquare size={20} />
+              <span>Chat with Front Desk on WhatsApp</span>
+            </a>
+          )}
+
           {/* Action buttons */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button onClick={handlePrint} className="btn btn-outline-gray btn-sm">
               <Printer size={14} />
               <span>Print Official Receipt</span>

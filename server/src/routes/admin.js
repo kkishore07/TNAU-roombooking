@@ -1,26 +1,37 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import db from '../db.js';
+import Booking from '../models/Booking.js';
+import Room from '../models/Room.js';
+import BlockedDate from '../models/BlockedDate.js';
+import Setting from '../models/Setting.js';
 
 const router = express.Router();
 
-// POST /api/admin/login - Authenticate with Admin PIN
-router.post('/login', (req, res) => {
+// POST /api/admin/login - Authenticate with Admin Email & Password (or PIN)
+router.post('/login', async (req, res) => {
   try {
-    const { pin } = req.body;
-    const settings = db.prepare('SELECT admin_pin FROM settings WHERE id = ?').get('general');
-    const validPin = settings ? settings.admin_pin : '1234';
+    const { email, password, pin } = req.body;
+    const settings = (await Setting.findById('general')) || {};
 
-    if (pin === validPin) {
-      // In a small app, return a simple session token
+    const validEmail = (process.env.ADMIN_EMAIL || 'tnaurooms@gmail.com').toLowerCase().trim();
+    const validPassword = process.env.ADMIN_PASSWORD || 'tnauroomscbe';
+    const validPin = settings.admin_pin || process.env.ADMIN_PIN || '1234';
+
+    const isEmailAuth = email && password && 
+      email.toLowerCase().trim() === validEmail && 
+      password === validPassword;
+
+    const isPinAuth = pin && (pin === validPin || pin === validPassword);
+
+    if (isEmailAuth || isPinAuth) {
       const token = `admin_tok_${Date.now()}_${Math.random().toString(36).substring(2)}`;
       res.json({
         success: true,
         message: 'Admin authentication successful',
-        data: { token, role: 'owner' }
+        data: { token, role: 'owner', email: validEmail }
       });
     } else {
-      res.status(401).json({ success: false, message: 'Invalid Admin PIN. Please try again.' });
+      res.status(401).json({ success: false, message: 'Invalid Admin credentials. Please check your email and password.' });
     }
   } catch (error) {
     console.error('Admin login error:', error);
@@ -29,62 +40,112 @@ router.post('/login', (req, res) => {
 });
 
 // GET /api/admin/stats - Overview analytics & operational summary
-router.get('/stats', (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    // Total Bookings & Revenue
-    const totals = db.prepare(`
-      SELECT 
-        COUNT(*) as total_bookings,
-        SUM(CASE WHEN booking_status != 'cancelled' THEN total_amount ELSE 0 END) as total_revenue,
-        SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) as paid_revenue,
-        SUM(CASE WHEN booking_status = 'confirmed' THEN 1 ELSE 0 END) as confirmed_count,
-        SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) as pending_payments
-      FROM bookings
-    `).get();
+    // Totals aggregation
+    const totalsAgg = await Booking.aggregate([
+      {
+        $group: {
+          _id: null,
+          total_bookings: { $sum: 1 },
+          total_revenue: {
+            $sum: {
+              $cond: [{ $ne: ['$booking_status', 'cancelled'] }, '$total_amount', 0]
+            }
+          },
+          paid_revenue: {
+            $sum: {
+              $cond: [{ $eq: ['$payment_status', 'paid'] }, '$total_amount', 0]
+            }
+          },
+          confirmed_count: {
+            $sum: {
+              $cond: [{ $eq: ['$booking_status', 'confirmed'] }, 1, 0]
+            }
+          },
+          pending_payments: {
+            $sum: {
+              $cond: [{ $eq: ['$payment_status', 'pending'] }, 1, 0]
+            }
+          }
+        }
+      }
+    ]);
+
+    const totals = totalsAgg[0] || {
+      total_bookings: 0,
+      total_revenue: 0,
+      paid_revenue: 0,
+      confirmed_count: 0,
+      pending_payments: 0
+    };
 
     // Today's Check-ins
-    const todayCheckIns = db.prepare(`
-      SELECT b.*, r.name as room_name, r.category as room_category
-      FROM bookings b
-      LEFT JOIN rooms r ON b.room_id = r.id
-      WHERE b.check_in_date = ? AND b.booking_status != 'cancelled'
-    `).all(today);
+    const todayCheckInDocs = await Booking.find({
+      check_in_date: today,
+      booking_status: { $ne: 'cancelled' }
+    });
+
+    const todayCheckIns = await Promise.all(todayCheckInDocs.map(async (b) => {
+      const r = await Room.findById(b.room_id);
+      return {
+        ...b.toJSON(),
+        room_name: r?.name || 'Reserved Room',
+        room_category: r?.category || ''
+      };
+    }));
 
     // Today's Check-outs
-    const todayCheckOuts = db.prepare(`
-      SELECT b.*, r.name as room_name, r.category as room_category
-      FROM bookings b
-      LEFT JOIN rooms r ON b.room_id = r.id
-      WHERE b.check_out_date = ? AND b.booking_status != 'cancelled'
-    `).all(today);
+    const todayCheckOutDocs = await Booking.find({
+      check_out_date: today,
+      booking_status: { $ne: 'cancelled' }
+    });
+
+    const todayCheckOuts = await Promise.all(todayCheckOutDocs.map(async (b) => {
+      const r = await Room.findById(b.room_id);
+      return {
+        ...b.toJSON(),
+        room_name: r?.name || 'Reserved Room',
+        room_category: r?.category || ''
+      };
+    }));
 
     // Active Rooms & Capacity
-    const roomMetrics = db.prepare(`
-      SELECT 
-        COUNT(*) as total_rooms,
-        SUM(total_inventory) as total_units
-      FROM rooms WHERE is_active = 1
-    `).get();
+    const roomAgg = await Room.aggregate([
+      { $match: { is_active: true } },
+      {
+        $group: {
+          _id: null,
+          total_rooms: { $sum: 1 },
+          total_units: { $sum: '$total_inventory' }
+        }
+      }
+    ]);
+
+    const roomMetrics = roomAgg[0] || { total_rooms: 0, total_units: 1 };
 
     // Current Active Stay Bookings (check_in <= today < check_out)
-    const currentOccupied = db.prepare(`
-      SELECT COUNT(*) as count FROM bookings
-      WHERE check_in_date <= ? AND check_out_date > ? AND booking_status != 'cancelled'
-    `).get(today, today).count;
+    const currentOccupied = await Booking.countDocuments({
+      check_in_date: { $lte: today },
+      check_out_date: { $gt: today },
+      booking_status: { $ne: 'cancelled' }
+    });
 
     const totalUnits = roomMetrics.total_units || 1;
     const occupancyRate = Math.min(100, Math.round((currentOccupied / totalUnits) * 100));
 
-    // Recent 5 bookings
-    const recentBookings = db.prepare(`
-      SELECT b.*, r.name as room_name, r.category as room_category
-      FROM bookings b
-      LEFT JOIN rooms r ON b.room_id = r.id
-      ORDER BY b.created_at DESC
-      LIMIT 8
-    `).all();
+    // Recent 8 bookings
+    const recentDocs = await Booking.find().sort({ created_at: -1 }).limit(8);
+    const recentBookings = await Promise.all(recentDocs.map(async (b) => {
+      const r = await Room.findById(b.room_id);
+      return {
+        ...b.toJSON(),
+        room_name: r?.name || 'Reserved Room',
+        room_category: r?.category || ''
+      };
+    }));
 
     res.json({
       success: true,
@@ -110,14 +171,17 @@ router.get('/stats', (req, res) => {
 });
 
 // GET /api/admin/blocked-dates - List blocked room date ranges
-router.get('/blocked-dates', (req, res) => {
+router.get('/blocked-dates', async (req, res) => {
   try {
-    const blocked = db.prepare(`
-      SELECT bd.*, r.name as room_name, r.category as room_category
-      FROM blocked_dates bd
-      LEFT JOIN rooms r ON bd.room_id = r.id
-      ORDER BY bd.start_date ASC
-    `).all();
+    const blockedDocs = await BlockedDate.find().sort({ start_date: 1 });
+    const blocked = await Promise.all(blockedDocs.map(async (bd) => {
+      const r = await Room.findById(bd.room_id);
+      return {
+        ...bd.toJSON(),
+        room_name: r?.name || 'Unknown Room',
+        room_category: r?.category || ''
+      };
+    }));
 
     res.json({ success: true, data: blocked });
   } catch (error) {
@@ -127,7 +191,7 @@ router.get('/blocked-dates', (req, res) => {
 });
 
 // POST /api/admin/blocked-dates - Block dates for a room
-router.post('/blocked-dates', (req, res) => {
+router.post('/blocked-dates', async (req, res) => {
   try {
     const { room_id, start_date, end_date, reason } = req.body;
     if (!room_id || !start_date || !end_date) {
@@ -135,21 +199,25 @@ router.post('/blocked-dates', (req, res) => {
     }
 
     const id = `blk-${uuidv4()}`;
-    const stmt = db.prepare(`
-      INSERT INTO blocked_dates (id, room_id, start_date, end_date, reason, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
+    const created = await BlockedDate.create({
+      _id: id,
+      room_id,
+      start_date,
+      end_date,
+      reason: reason || 'Maintenance / Private Hold',
+      created_at: new Date().toISOString()
+    });
 
-    stmt.run(id, room_id, start_date, end_date, reason || 'Maintenance / Private Hold', new Date().toISOString());
+    const r = await Room.findById(room_id);
 
-    const created = db.prepare(`
-      SELECT bd.*, r.name as room_name
-      FROM blocked_dates bd
-      LEFT JOIN rooms r ON bd.room_id = r.id
-      WHERE bd.id = ?
-    `).get(id);
-
-    res.status(201).json({ success: true, message: 'Room dates blocked successfully', data: created });
+    res.status(201).json({
+      success: true,
+      message: 'Room dates blocked successfully',
+      data: {
+        ...created.toJSON(),
+        room_name: r?.name || 'Reserved Room'
+      }
+    });
   } catch (error) {
     console.error('Error blocking room dates:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -157,13 +225,12 @@ router.post('/blocked-dates', (req, res) => {
 });
 
 // DELETE /api/admin/blocked-dates/:id - Delete blocked date
-router.delete('/blocked-dates/:id', (req, res) => {
+router.delete('/blocked-dates/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const stmt = db.prepare('DELETE FROM blocked_dates WHERE id = ?');
-    const result = stmt.run(id);
+    const result = await BlockedDate.findByIdAndDelete(id);
 
-    if (result.changes === 0) {
+    if (!result) {
       return res.status(404).json({ success: false, message: 'Blocked date record not found' });
     }
 
@@ -175,10 +242,13 @@ router.delete('/blocked-dates/:id', (req, res) => {
 });
 
 // GET /api/admin/settings - Get settings
-router.get('/settings', (req, res) => {
+router.get('/settings', async (req, res) => {
   try {
-    const settings = db.prepare('SELECT * FROM settings WHERE id = ?').get('general') || {};
-    res.json({ success: true, data: settings });
+    let settings = await Setting.findById('general');
+    if (!settings) {
+      settings = await Setting.create({ _id: 'general' });
+    }
+    res.json({ success: true, data: settings.toJSON() });
   } catch (error) {
     console.error('Error fetching settings:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -186,60 +256,20 @@ router.get('/settings', (req, res) => {
 });
 
 // PUT /api/admin/settings - Update settings
-router.put('/settings', (req, res) => {
+router.put('/settings', async (req, res) => {
   try {
-    const {
-      hotel_name,
-      tagline,
-      address,
-      phone,
-      email,
-      whatsapp_number,
-      currency_symbol,
-      currency_code,
-      tax_percentage,
-      admin_pin,
-      upi_id,
-      upi_merchant_name,
-      whatsapp_template
-    } = req.body;
+    const updateData = { ...req.body };
+    if (updateData.tax_percentage !== undefined) {
+      updateData.tax_percentage = parseFloat(updateData.tax_percentage);
+    }
 
-    const stmt = db.prepare(`
-      UPDATE settings SET
-        hotel_name = COALESCE(?, hotel_name),
-        tagline = COALESCE(?, tagline),
-        address = COALESCE(?, address),
-        phone = COALESCE(?, phone),
-        email = COALESCE(?, email),
-        whatsapp_number = COALESCE(?, whatsapp_number),
-        currency_symbol = COALESCE(?, currency_symbol),
-        currency_code = COALESCE(?, currency_code),
-        tax_percentage = COALESCE(?, tax_percentage),
-        admin_pin = COALESCE(?, admin_pin),
-        upi_id = COALESCE(?, upi_id),
-        upi_merchant_name = COALESCE(?, upi_merchant_name),
-        whatsapp_template = COALESCE(?, whatsapp_template)
-      WHERE id = 'general'
-    `);
-
-    stmt.run(
-      hotel_name || null,
-      tagline || null,
-      address || null,
-      phone || null,
-      email || null,
-      whatsapp_number || null,
-      currency_symbol || null,
-      currency_code || null,
-      tax_percentage !== undefined ? parseFloat(tax_percentage) : null,
-      admin_pin || null,
-      upi_id || null,
-      upi_merchant_name || null,
-      whatsapp_template || null
+    const updated = await Setting.findOneAndUpdate(
+      { _id: 'general' },
+      { $set: updateData },
+      { new: true, upsert: true }
     );
 
-    const updated = db.prepare('SELECT * FROM settings WHERE id = ?').get('general');
-    res.json({ success: true, message: 'Settings updated successfully', data: updated });
+    res.json({ success: true, message: 'Settings updated successfully', data: updated.toJSON() });
   } catch (error) {
     console.error('Error updating settings:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -250,7 +280,7 @@ router.put('/settings', (req, res) => {
 router.post('/test-notifications', async (req, res) => {
   try {
     const { target_email } = req.body;
-    const settings = db.prepare('SELECT * FROM settings WHERE id = ?').get('general') || {};
+    const settings = (await Setting.findById('general')) || {};
     
     const dummyBooking = {
       id: 'test-diagnostic',

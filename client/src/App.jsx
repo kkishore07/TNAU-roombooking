@@ -25,6 +25,7 @@ export default function App() {
 
   // Search filter states
   const [checkIn, setCheckIn] = useState(todayStr);
+  const [checkInTime, setCheckInTime] = useState('02:00 PM');
   const [checkOut, setCheckOut] = useState(tomorrowStr);
   const [guests, setGuests] = useState(2);
   const [category, setCategory] = useState('All');
@@ -124,6 +125,8 @@ export default function App() {
       <HeroSearch
         checkIn={checkIn}
         setCheckIn={setCheckIn}
+        checkInTime={checkInTime}
+        setCheckInTime={setCheckInTime}
         checkOut={checkOut}
         setCheckOut={setCheckOut}
         guests={guests}
@@ -254,7 +257,7 @@ export default function App() {
               Simple, Secure & Instant Booking
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-              Reserve your accommodation at TNAU with ease — no logins, instant WhatsApp confirmations, and transparent pricing.
+              Reserve your accommodation at TNAU with ease — no logins, instant email confirmations, and transparent pricing.
             </p>
           </div>
 
@@ -279,10 +282,10 @@ export default function App() {
                 <MessageCircle size={22} />
               </div>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                WhatsApp Confirmations
+                Email Receipts & WhatsApp Chat
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.87rem', lineHeight: 1.6 }}>
-                Receive full booking receipts and vouchers directly on your WhatsApp instantly after booking.
+                Receive full booking receipts and itemized invoices directly in your email, with instant WhatsApp chat support.
               </p>
             </div>
 
@@ -384,10 +387,10 @@ export default function App() {
 
             <div style={{ padding: '1.4rem', borderRadius: 'var(--radius-md)', background: '#ffffff', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)' }}>
               <h3 style={{ fontSize: '1.02rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                How do I receive my booking confirmation via WhatsApp?
+                How do I receive my booking confirmation?
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                As soon as your booking is finalized, a WhatsApp confirmation link is generated with your complete reservation details. Click <strong>"Open in WhatsApp"</strong> on your phone to open the chat instantly.
+                As soon as your booking is finalized, an itemized booking confirmation and invoice are sent directly to your email address. You can also click <strong>"Chat on WhatsApp"</strong> anytime to connect with our front desk.
               </p>
             </div>
 
@@ -557,6 +560,7 @@ export default function App() {
         <BookingModal
           room={selectedRoomForBooking}
           checkIn={checkIn}
+          checkInTime={checkInTime}
           checkOut={checkOut}
           guests={guests}
           settings={settings}

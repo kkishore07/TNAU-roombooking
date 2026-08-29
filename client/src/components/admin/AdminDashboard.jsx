@@ -25,6 +25,8 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => sessionStorage.getItem('hotel_admin_auth') === 'true'
   );
+  const [adminEmail, setAdminEmail] = useState('tnaurooms@gmail.com');
+  const [adminPassword, setAdminPassword] = useState('');
   const [pin, setPin] = useState('');
   const [authError, setAuthError] = useState('');
 
@@ -105,15 +107,15 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
     e.preventDefault();
     setAuthError('');
     try {
-      const res = await adminLogin(pin);
+      const res = await adminLogin({ email: adminEmail.trim(), password: adminPassword });
       if (res.success) {
         setIsAuthenticated(true);
         sessionStorage.setItem('hotel_admin_auth', 'true');
       } else {
-        setAuthError(res.message || 'Invalid PIN');
+        setAuthError(res.message || 'Invalid credentials');
       }
     } catch {
-      setAuthError('Authentication error. Try PIN: 1234');
+      setAuthError('Authentication error. Please check your credentials.');
     }
   };
 
@@ -333,7 +335,7 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
             Owner & Admin Portal
           </h2>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-            Enter your 4-digit security PIN to access room management, guest bookings, and settings.
+            Sign in with your administrator credentials to access room management, bookings, and revenue stats.
           </p>
 
           {authError && (
@@ -344,22 +346,41 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
               borderRadius: 'var(--radius-sm)',
               color: '#fb7185',
               fontSize: '0.825rem',
-              marginBottom: '1rem'
+              marginBottom: '1rem',
+              textAlign: 'left'
             }}>
               {authError}
             </div>
           )}
 
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleLogin} style={{ textAlign: 'left' }}>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                Admin Email
+              </label>
+              <input
+                type="email"
+                className="form-input"
+                placeholder="tnaurooms@gmail.com"
+                value={adminEmail}
+                onChange={(e) => setAdminEmail(e.target.value)}
+                required
+                style={{ height: '44px', fontSize: '0.9rem' }}
+              />
+            </div>
+
             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="form-label" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                Admin Password
+              </label>
               <input
                 type="password"
-                maxLength={8}
                 className="form-input"
-                placeholder="Enter PIN (Default: 1234)"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                style={{ textAlign: 'center', fontSize: '1.4rem', letterSpacing: '0.3em', height: '52px' }}
+                placeholder="Enter password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                required
+                style={{ height: '44px', fontSize: '0.95rem' }}
                 autoFocus
               />
             </div>
@@ -369,14 +390,10 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                 Cancel
               </button>
               <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
-                <span>Unlock Portal</span>
+                <span>Sign In</span>
               </button>
             </div>
           </form>
-
-          <div style={{ marginTop: '1.25rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            Default test PIN is <strong>1234</strong>
-          </div>
         </div>
       </div>
     );
@@ -387,12 +404,12 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
     <div className="modal-overlay" style={{ alignItems: 'flex-start', padding: '1rem' }} onClick={onClose}>
       <div 
         className="modal-content" 
-        style={{ maxWidth: '1180px', width: '98%', maxHeight: '94vh', display: 'flex', flexDirection: 'column' }}
+        style={{ maxWidth: '1180px', width: '98%', maxHeight: '94vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         onClick={(e) => e.stopPropagation()}
       >
         
         {/* Header */}
-        <div className="modal-header" style={{ padding: '1.25rem 1.5rem' }}>
+        <div className="modal-header" style={{ padding: '1.25rem 1.5rem', flexShrink: 0, position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{
               width: '36px',
@@ -407,10 +424,10 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
               <ShieldCheck size={20} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff' }}>
-                {settings.hotel_name || 'Serenity Haven'} Management
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {settings.hotel_name || 'TNAU Guest House'} Management
               </h2>
-              <div style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--tnau-green)', fontWeight: 600 }}>
                 Owner & Front Desk Portal
               </div>
             </div>
@@ -430,35 +447,38 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
           </div>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation (Permanently docked below header, non-scrolling) */}
         <div style={{
           display: 'flex',
           gap: '0.25rem',
-          padding: '0.5rem 1.5rem',
-          background: 'var(--bg-surface-elevated)',
-          borderBottom: '1px solid var(--border-subtle)',
-          overflowX: 'auto'
+          padding: '0.6rem 1.5rem',
+          background: '#f8fafc',
+          borderBottom: '1px solid var(--border-light)',
+          overflowX: 'auto',
+          flexShrink: 0,
+          position: 'relative'
         }}>
           {[
             { id: 'overview', label: '📊 Overview & Stats' },
             { id: 'rooms', label: '🛏️ Rooms & Pricing' },
             { id: 'bookings', label: '📋 Bookings & Guests' },
             { id: 'blocked', label: '🚫 Block Dates / Hold' },
-            { id: 'settings', label: '⚙️ Hotel Settings & WhatsApp' }
+            { id: 'settings', label: '⚙️ Hotel & Payment Settings' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                padding: '0.6rem 1rem',
+                padding: '0.6rem 1.1rem',
                 borderRadius: 'var(--radius-md)',
                 fontSize: '0.85rem',
                 fontWeight: 600,
                 color: activeTab === tab.id ? '#ffffff' : 'var(--text-secondary)',
-                background: activeTab === tab.id ? 'var(--bg-surface)' : 'transparent',
-                border: activeTab === tab.id ? '1px solid var(--border-light)' : '1px solid transparent',
+                background: activeTab === tab.id ? 'var(--tnau-green)' : 'transparent',
+                border: activeTab === tab.id ? '1px solid var(--tnau-green)' : '1px solid transparent',
                 whiteSpace: 'nowrap',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                cursor: 'pointer'
               }}
             >
               {tab.label}
@@ -501,9 +521,9 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                 marginBottom: '2rem'
               }}>
                 
-                <div style={{ padding: '1.25rem', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ padding: '1.25rem', background: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-card)' }}>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Total Revenue</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#34d399', fontFamily: 'var(--font-heading)' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#10b981', fontFamily: 'var(--font-heading)' }}>
                     {currencySymbol}{Number(stats.total_revenue || 0).toLocaleString('en-IN')}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
@@ -511,9 +531,9 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                   </div>
                 </div>
 
-                <div style={{ padding: '1.25rem', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ padding: '1.25rem', background: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-card)' }}>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Total Bookings</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#60a5fa', fontFamily: 'var(--font-heading)' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#2563eb', fontFamily: 'var(--font-heading)' }}>
                     {stats.total_bookings}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
@@ -521,9 +541,9 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                   </div>
                 </div>
 
-                <div style={{ padding: '1.25rem', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ padding: '1.25rem', background: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-card)' }}>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Today's Arrivals</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fbbf24', fontFamily: 'var(--font-heading)' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#d97706', fontFamily: 'var(--font-heading)' }}>
                     {stats.today_checkins?.length || 0}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
@@ -531,9 +551,9 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                   </div>
                 </div>
 
-                <div style={{ padding: '1.25rem', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ padding: '1.25rem', background: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-card)' }}>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Current Occupancy</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-heading)' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-heading)' }}>
                     {stats.occupancy_rate}%
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
@@ -545,8 +565,8 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
 
               {/* Today's Check-ins Section */}
               <div style={{ marginBottom: '2rem' }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Clock size={18} color="#34d399" />
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Clock size={18} color="var(--tnau-green)" />
                   <span>Today's Check-in Arrivals ({stats.today_checkins?.length || 0})</span>
                 </h3>
 
@@ -558,16 +578,17 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '1rem 1.25rem',
-                        background: 'var(--bg-surface-elevated)',
+                        background: '#ffffff',
                         borderRadius: 'var(--radius-md)',
-                        border: '1px solid var(--border-subtle)',
+                        border: '1px solid var(--border-light)',
+                        boxShadow: 'var(--shadow-card)',
                         flexWrap: 'wrap',
                         gap: '0.75rem'
                       }}>
                         <div>
-                          <div style={{ fontWeight: 700, color: '#ffffff' }}>{b.customer_name} • {b.room_name}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            📞 {b.customer_phone} • Ref: {b.booking_code} • {b.num_guests} Guests
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.98rem' }}>{b.customer_name} • {b.room_name}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                            📞 {b.customer_phone} • Ref: <strong>{b.booking_code}</strong> • {b.num_guests} Guests • ⏰ Check-in: <strong style={{ color: 'var(--tnau-green)' }}>{b.check_in_time || '02:00 PM'}</strong>
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -598,7 +619,7 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
               {/* Recent Bookings Feed */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff' }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                     Recent Reservations
                   </h3>
                   <button onClick={() => setActiveTab('bookings')} className="btn btn-outline btn-sm">
@@ -613,18 +634,19 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '1rem 1.25rem',
-                      background: 'var(--bg-surface-elevated)',
+                      background: '#ffffff',
                       borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-subtle)',
+                      border: '1px solid var(--border-light)',
+                      boxShadow: 'var(--shadow-card)',
                       flexWrap: 'wrap',
                       gap: '0.75rem'
                     }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 700, color: '#ffffff' }}>{b.customer_name}</span>
+                          <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.98rem' }}>{b.customer_name}</span>
                           <span className="badge badge-emerald">{b.booking_status}</span>
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                           {b.room_name} • {b.check_in_date} to {b.check_out_date} ({b.num_nights} nights)
                         </div>
                       </div>
@@ -659,7 +681,7 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff' }}>Room Inventory & Rates</h3>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Room Inventory & Rates</h3>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                     Add new rooms, upload room photos, modify pricing, and update amenities.
                   </p>
@@ -677,9 +699,10 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                     <div
                       key={room.id}
                       style={{
-                        background: 'var(--bg-surface-elevated)',
+                        background: '#ffffff',
                         borderRadius: 'var(--radius-lg)',
-                        border: '1px solid var(--border-subtle)',
+                        border: '1px solid var(--border-light)',
+                        boxShadow: 'var(--shadow-card)',
                         overflow: 'hidden',
                         display: 'flex',
                         flexDirection: 'column'
@@ -698,8 +721,8 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                       <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.4rem' }}>
-                            <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff' }}>{room.name}</h4>
-                            <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#34d399' }}>
+                            <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{room.name}</h4>
+                            <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--tnau-green)' }}>
                               {currencySymbol}{Number(room.price_per_night).toLocaleString('en-IN')}<span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>/nt</span>
                             </span>
                           </div>
@@ -734,7 +757,7 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff' }}>Guest Bookings ({bookings.length})</h3>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Guest Bookings ({bookings.length})</h3>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -794,7 +817,7 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                           <strong>{booking.room_name}</strong> • Ref: <span style={{ color: 'var(--tnau-green)', fontWeight: 700 }}>{booking.booking_code}</span>
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                          📅 {booking.check_in_date} → {booking.check_out_date} ({booking.num_nights} nights) • 👥 {booking.num_guests} Guests • 📞 {booking.customer_phone}
+                          📅 {booking.check_in_date} (from {booking.check_in_time || '02:00 PM'}) → {booking.check_out_date} ({booking.num_nights} nights) • 👥 {booking.num_guests} Guests • 📞 {booking.customer_phone}
                         </div>
                         {booking.payment_reference && (
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.35rem', background: 'var(--tnau-green-light)', padding: '0.2rem 0.5rem', borderRadius: '4px', display: 'inline-block' }}>
@@ -812,7 +835,7 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', flexShrink: 0 }}>
                         <button
                           onClick={() => handleOpenWhatsApp(booking)}
                           className="btn btn-whatsapp btn-sm"
@@ -827,7 +850,15 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                           className="form-select"
                           value={booking.payment_status}
                           onChange={(e) => handleUpdatePaymentStatus(booking.id, e.target.value)}
-                          style={{ height: '34px', fontSize: '0.8rem', width: '110px' }}
+                          style={{
+                            height: 'auto',
+                            minHeight: '36px',
+                            padding: '0.35rem 0.65rem',
+                            fontSize: '0.82rem',
+                            lineHeight: '1.2',
+                            width: '115px',
+                            cursor: 'pointer'
+                          }}
                           title="Payment Status"
                         >
                           <option value="paid">✓ Paid</option>
@@ -840,7 +871,15 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                           className="form-select"
                           value={booking.booking_status}
                           onChange={(e) => handleUpdateBookingStatus(booking.id, e.target.value)}
-                          style={{ height: '34px', fontSize: '0.8rem', width: '130px' }}
+                          style={{
+                            height: 'auto',
+                            minHeight: '36px',
+                            padding: '0.35rem 0.65rem',
+                            fontSize: '0.82rem',
+                            lineHeight: '1.2',
+                            width: '135px',
+                            cursor: 'pointer'
+                          }}
                           title="Stay Status"
                         >
                           <option value="confirmed">Confirmed</option>
@@ -861,7 +900,7 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff' }}>Blocked Dates & Maintenance</h3>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Blocked Dates & Maintenance</h3>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                     Prevent customers from booking specific rooms during maintenance, renovations, or VIP holds.
                   </p>
@@ -884,12 +923,13 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       padding: '1rem 1.25rem',
-                      background: 'var(--bg-surface-elevated)',
+                      background: '#ffffff',
                       borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-subtle)'
+                      border: '1px solid var(--border-light)',
+                      boxShadow: 'var(--shadow-card)'
                     }}>
                       <div>
-                        <div style={{ fontWeight: 700, color: '#ffffff' }}>{b.room_name || 'Room'}</div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{b.room_name || 'Room'}</div>
                         <div style={{ fontSize: '0.85rem', color: '#fb7185' }}>
                           📅 {b.start_date} to {b.end_date}
                         </div>
@@ -910,8 +950,8 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
           {/* TAB 5: SETTINGS */}
           {activeTab === 'settings' && (
             <form onSubmit={handleSaveSettings} style={{ maxWidth: '780px' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', marginBottom: '1.25rem' }}>
-                Hotel Profile, WhatsApp & Payment Settings
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>
+                Hotel Profile & Payment Settings
               </h3>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -1010,19 +1050,6 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">WhatsApp Message Template</label>
-                <textarea
-                  className="form-textarea"
-                  rows="6"
-                  value={settings.whatsapp_template || ''}
-                  onChange={(e) => setSettings({ ...settings, whatsapp_template: e.target.value })}
-                />
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Tags available: {'{customer_name}'}, {'{booking_code}'}, {'{room_name}'}, {'{check_in_date}'}, {'{check_out_date}'}, {'{num_nights}'}, {'{num_guests}'}, {'{total_amount}'}, {'{currency_symbol}'}, {'{hotel_address}'}, {'{hotel_phone}'}
-                </div>
-              </div>
-
               <div style={{ marginTop: '1.5rem' }}>
                 <button type="submit" className="btn btn-primary" disabled={loading}>
                   <span>Save All Settings</span>
@@ -1040,7 +1067,7 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
         <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowRoomModal(false)}>
           <div className="modal-content" style={{ maxWidth: '680px' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#ffffff' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 {editingRoom ? 'Edit Room' : 'Add New Room'}
               </h3>
               <button onClick={() => setShowRoomModal(false)} style={{ color: 'var(--text-secondary)' }}>
@@ -1216,7 +1243,7 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
         <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowBlockModal(false)}>
           <div className="modal-content" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#ffffff' }}>Block Room Dates</h3>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>Block Room Dates</h3>
               <button onClick={() => setShowBlockModal(false)} style={{ color: 'var(--text-secondary)' }}>
                 <X size={18} />
               </button>

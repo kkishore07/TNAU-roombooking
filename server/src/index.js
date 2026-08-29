@@ -1,24 +1,21 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
 
-import { initDB } from './db.js';
+import { connectDB } from './db.js';
 import roomsRouter from './routes/rooms.js';
 import bookingsRouter from './routes/bookings.js';
 import paymentsRouter from './routes/payments.js';
 import adminRouter from './routes/admin.js';
 import whatsappRouter from './routes/whatsapp.js';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Initialize DB schema & seed starter data
-initDB();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -74,7 +71,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🏨 Room Booking Server running at http://localhost:${PORT}`);
-  console.log(`📸 Uploads served from ${uploadsDir}`);
-});
+// Connect to MongoDB Atlas and start server
+async function startServer() {
+  await connectDB();
+  app.listen(PORT, () => {
+    console.log(`🏨 Room Booking Server running at http://localhost:${PORT}`);
+    console.log(`📸 Uploads served from ${uploadsDir}`);
+  });
+}
+
+startServer();

@@ -63,11 +63,15 @@ export default function RoomCard({ room, onSelectRoom, onViewDetails, currencySy
           }}
         />
 
-        {/* Category Badge & Availability Tag */}
-        <div style={{ position: 'absolute', top: '1rem', left: '1rem', display: 'flex', gap: '0.5rem', zIndex: 3 }}>
+        {/* Category Badge — top left */}
+        <div style={{ position: 'absolute', top: '1rem', left: '1rem', zIndex: 3 }}>
           <span className="badge badge-emerald">
             {room.category}
           </span>
+        </div>
+
+        {/* Availability Tag — top right */}
+        <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 3 }}>
           {isAvailable ? (
             availableCount <= 2 ? (
               <span className="badge badge-gold">

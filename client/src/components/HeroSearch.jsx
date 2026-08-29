@@ -1,10 +1,12 @@
 import React from 'react';
-import { Calendar, Users, Sparkles, ShieldCheck, MessageSquare, CreditCard, ChevronRight, Building2 } from 'lucide-react';
+import { Calendar, Clock, Users, Sparkles, ShieldCheck, MessageSquare, CreditCard, ChevronRight, Building2 } from 'lucide-react';
 import tnauLogo from '../assets/tnau_logo.png';
 
 export default function HeroSearch({
   checkIn,
   setCheckIn,
+  checkInTime = '02:00 PM',
+  setCheckInTime,
   checkOut,
   setCheckOut,
   guests,
@@ -172,6 +174,34 @@ export default function HeroSearch({
               />
             </div>
 
+            {/* Check-In Time */}
+            <div>
+              <label className="form-label">
+                <Clock size={14} color="var(--tnau-green)" />
+                <span>Check-in Time</span>
+              </label>
+              <select
+                className="form-select"
+                value={checkInTime}
+                onChange={(e) => setCheckInTime && setCheckInTime(e.target.value)}
+                style={{ height: '46px' }}
+              >
+                <option value="10:00 AM">10:00 AM (Early)</option>
+                <option value="11:00 AM">11:00 AM (Early)</option>
+                <option value="12:00 PM">12:00 PM (Noon)</option>
+                <option value="01:00 PM">01:00 PM</option>
+                <option value="02:00 PM">02:00 PM (Standard)</option>
+                <option value="03:00 PM">03:00 PM</option>
+                <option value="04:00 PM">04:00 PM</option>
+                <option value="05:00 PM">05:00 PM</option>
+                <option value="06:00 PM">06:00 PM</option>
+                <option value="07:00 PM">07:00 PM</option>
+                <option value="08:00 PM">08:00 PM (Late)</option>
+                <option value="09:00 PM">09:00 PM (Late)</option>
+                <option value="10:00 PM">10:00 PM or Later</option>
+              </select>
+            </div>
+
             {/* Check-Out Date */}
             <div>
               <label className="form-label">
@@ -240,7 +270,7 @@ export default function HeroSearch({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--tnau-green)' }}>
                 <Calendar size={15} />
                 <span>
-                  <strong>{Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24))} Night(s)</strong>: {new Date(checkIn).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })} → {new Date(checkOut).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  <strong>{Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24))} Night(s)</strong>: {new Date(checkIn).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })} (from {checkInTime}) → {new Date(checkOut).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </span>
               </div>
               <span className="badge badge-emerald">
@@ -264,8 +294,8 @@ export default function HeroSearch({
               <MessageSquare size={17} />
             </div>
             <div>
-              <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.875rem' }}>WhatsApp Confirmation</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Instant booking receipts on chat</div>
+              <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.875rem' }}>Email Receipt & WhatsApp Chat</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Official invoice + direct front desk chat</div>
             </div>
           </div>
 

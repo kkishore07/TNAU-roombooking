@@ -1,28 +1,29 @@
 import express from 'express';
-import db from '../db.js';
+import Booking from '../models/Booking.js';
+import Room from '../models/Room.js';
+import Setting from '../models/Setting.js';
 import { buildWhatsAppMessage } from './bookings.js';
 
 const router = express.Router();
 
 // GET /api/whatsapp/booking-link/:bookingId - Generate WhatsApp click-to-chat URL
-router.get('/booking-link/:bookingId', (req, res) => {
+router.get('/booking-link/:bookingId', async (req, res) => {
   try {
     const { bookingId } = req.params;
-    const booking = db.prepare(`
-      SELECT b.*, r.name as room_name, r.category as room_category
-      FROM bookings b
-      LEFT JOIN rooms r ON b.room_id = r.id
-      WHERE b.id = ? OR b.booking_code = ?
-    `).get(bookingId, bookingId);
+    const booking = await Booking.findOne({
+      $or: [{ _id: bookingId }, { booking_code: bookingId }]
+    });
 
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    const settings = db.prepare('SELECT * FROM settings WHERE id = ?').get('general') || {};
+    const room = await Room.findById(booking.room_id);
+    const settings = (await Setting.findById('general')) || {};
+
     const { message, cleanPhone, whatsappUrl } = buildWhatsAppMessage(
-      booking,
-      { name: booking.room_name, category: booking.room_category },
+      booking.toJSON(),
+      room || { name: 'Reserved Room', category: '' },
       settings
     );
 

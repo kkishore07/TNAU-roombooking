@@ -96,11 +96,12 @@ export async function getWhatsAppLink(bookingId) {
 }
 
 // Admin APIs
-export async function adminLogin(pin) {
+export async function adminLogin(credentials) {
+  const payload = typeof credentials === 'object' ? credentials : { pin: credentials };
   const res = await fetch(`${API_BASE}/admin/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pin })
+    body: JSON.stringify(payload)
   });
   return handleResponse(res);
 }

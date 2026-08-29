@@ -86,7 +86,7 @@ function buildEmailHTML(booking, room, settings) {
               </tr>
               <tr style="background:#f9fafb;">
                 <td style="padding:8px 6px;font-size:14px;color:#6b7280;">Check-in</td>
-                <td style="padding:8px 6px;font-size:14px;color:#111827;font-weight:600;">${booking.check_in_date} <span style="color:#1a6b32;">(from 2:00 PM)</span></td>
+                <td style="padding:8px 6px;font-size:14px;color:#111827;font-weight:600;">${booking.check_in_date} <span style="color:#1a6b32;">(from ${booking.check_in_time || '2:00 PM'})</span></td>
               </tr>
               <tr>
                 <td style="padding:8px 0;font-size:14px;color:#6b7280;">Check-out</td>
@@ -152,132 +152,98 @@ function buildEmailHTML(booking, room, settings) {
 export async function sendEmailConfirmation(booking, room, settings) {
   try {
     const customerEmail = booking.customer_email?.trim();
-    if (!customerEmail || !customerEmail.includes('@')) {
-      console.log('📧 Email: No valid customer email provided');
-      return { sent: false, reason: 'no_email' };
-    }
-
     const hotelName = settings?.hotel_name || 'Guest House';
     const html = buildEmailHTML(booking, room, settings);
+    let customerSent = false;
 
-    // 1. Check if RESEND_API_KEY is configured (HTTPS Port 443 - 100% reliable, no SMTP port block)
-    const resendApiKey = process.env.RESEND_API_KEY?.trim();
-    if (resendApiKey) {
+    // 1. Try Gmail SMTP → send to CUSTOMER
+    const transporter = createTransporter();
+    if (transporter && customerEmail && customerEmail.includes('@')) {
       try {
-        const fromEmail = process.env.RESEND_FROM_EMAIL || 'TNAU Guest House <onboarding@resend.dev>';
-        const res = await axios.post(
-          'https://api.resend.com/emails',
-          {
-            from: fromEmail,
-            to: [customerEmail],
-            subject: `✅ Booking Confirmed – ${booking.booking_code} | ${hotelName}`,
-            html
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${resendApiKey}`,
-              'Content-Type': 'application/json'
-            },
-            timeout: 8000
-          }
-        );
-        if (res.status === 200 || res.status === 201) {
-          console.log(`📧 Email sent via Resend API to ${customerEmail}`);
-          return { sent: true, to: customerEmail, provider: 'resend' };
+        await transporter.sendMail({
+          from: `"${hotelName}" <${process.env.GMAIL_USER}>`,
+          to: customerEmail,
+          subject: `✅ Booking Confirmed – ${booking.booking_code} | ${hotelName}`,
+          html,
+          text: `Booking Confirmed!\n\nDear ${booking.customer_name},\nYour booking ${booking.booking_code} is confirmed.\nCheck-in: ${booking.check_in_date}\nCheck-out: ${booking.check_out_date}\nTotal: ${settings?.currency_symbol || '₹'}${booking.total_amount}\n\nThank you, ${hotelName}`
+        });
+        console.log(`📧 Email sent via Gmail SMTP to customer: ${customerEmail}`);
+        customerSent = true;
+      } catch (smtpErr) {
+        console.error('📧 Gmail SMTP error (customer):', smtpErr.message);
+      }
+    } else if (!customerEmail || !customerEmail.includes('@')) {
+      console.log('📧 Email: No valid customer email provided — skipping customer copy');
+    }
+
+    // 2. Send admin notification copy to tnaurooms@gmail.com
+    const adminEmail = process.env.ADMIN_EMAIL?.trim() || 'tnaurooms@gmail.com';
+    if (adminEmail) {
+      const adminSubject = `📥 New Booking: ${booking.booking_code} — ${booking.customer_name}`;
+      const adminHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;">
+        <h2 style="color:#1a6b32;">📥 New Booking Received</h2>
+        <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;">
+          <tr><td style="color:#6b7280;width:40%;padding:8px 12px;">Booking Code</td><td style="font-weight:700;color:#111;padding:8px 12px;">${booking.booking_code}</td></tr>
+          <tr style="background:#f9fafb"><td style="color:#6b7280;padding:8px 12px;">Guest Name</td><td style="font-weight:700;color:#111;padding:8px 12px;">${booking.customer_name}</td></tr>
+          <tr><td style="color:#6b7280;padding:8px 12px;">Phone</td><td style="font-weight:700;color:#111;padding:8px 12px;">${booking.customer_phone}</td></tr>
+          <tr style="background:#f9fafb"><td style="color:#6b7280;padding:8px 12px;">Guest Email</td><td style="padding:8px 12px;">${booking.customer_email || 'Not provided'}</td></tr>
+          <tr><td style="color:#6b7280;padding:8px 12px;">Room</td><td style="padding:8px 12px;">${room?.name || 'Reserved Room'}</td></tr>
+          <tr style="background:#f9fafb"><td style="color:#6b7280;padding:8px 12px;">Check-in</td><td style="padding:8px 12px;">${booking.check_in_date} <strong style="color:#1a6b32;">(from ${booking.check_in_time || '02:00 PM'})</strong></td></tr>
+          <tr><td style="color:#6b7280;padding:8px 12px;">Check-out</td><td style="padding:8px 12px;">${booking.check_out_date}</td></tr>
+          <tr style="background:#f9fafb"><td style="color:#6b7280;padding:8px 12px;">Nights</td><td style="padding:8px 12px;">${booking.num_nights} Night(s)</td></tr>
+          <tr><td style="color:#6b7280;padding:8px 12px;">Total Amount</td><td style="font-weight:800;font-size:1.2em;color:#1a6b32;padding:8px 12px;">${settings?.currency_symbol || '₹'}${Number(booking.total_amount).toLocaleString('en-IN')}</td></tr>
+          <tr style="background:#f9fafb"><td style="color:#6b7280;padding:8px 12px;">Payment</td><td style="padding:8px 12px;">${(booking.payment_status || 'paid').toUpperCase()} via ${(booking.payment_method || 'online').toUpperCase()}</td></tr>
+        </table>
+      </div>`;
+
+      // Try sending via Gmail SMTP first (no domain restriction, delivers directly to tnaurooms@gmail.com)
+      if (transporter) {
+        try {
+          await transporter.sendMail({
+            from: `"${hotelName} Booking System" <${process.env.GMAIL_USER}>`,
+            to: adminEmail,
+            subject: adminSubject,
+            html: adminHtml
+          });
+          console.log(`📧 Admin notification sent via Gmail SMTP to ${adminEmail}`);
+        } catch (smtpAdminErr) {
+          console.error('📧 Gmail SMTP error (admin copy):', smtpAdminErr.message);
         }
-      } catch (resendErr) {
-        console.error('📧 Resend API error:', resendErr.response?.data || resendErr.message);
+      }
+
+      // Also send via Resend if configured
+      const resendApiKey = process.env.RESEND_API_KEY?.trim();
+      if (resendApiKey) {
+        try {
+          await axios.post(
+            'https://api.resend.com/emails',
+            { from: 'TNAU Booking System <onboarding@resend.dev>', to: [adminEmail], subject: adminSubject, html: adminHtml },
+            { headers: { Authorization: `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' }, timeout: 8000 }
+          );
+          console.log(`📧 Admin notification sent via Resend to ${adminEmail}`);
+        } catch (resendErr) {
+          // If Resend trial restricts to owner email, that is expected; Gmail SMTP has already delivered it!
+        }
       }
     }
 
-    // 2. Fallback to Gmail SMTP (Nodemailer)
-    const transporter = createTransporter();
-    if (!transporter) {
-      console.log('📧 Email: Not configured (set GMAIL_USER + GMAIL_APP_PASSWORD in .env)');
+    if (!transporter && (!customerEmail || !customerEmail.includes('@'))) {
       return { sent: false, reason: 'not_configured' };
     }
 
-    await transporter.sendMail({
-      from: `"${hotelName}" <${process.env.GMAIL_USER}>`,
-      to: customerEmail,
-      subject: `✅ Booking Confirmed – ${booking.booking_code} | ${hotelName}`,
-      html,
-      text: `Booking Confirmed!\n\nDear ${booking.customer_name},\nYour booking ${booking.booking_code} is confirmed.\nCheck-in: ${booking.check_in_date}\nCheck-out: ${booking.check_out_date}\nTotal: ${settings?.currency_symbol || '₹'}${booking.total_amount}\n\nThank you, ${hotelName}`
-    });
-
-    console.log(`📧 Email sent via Gmail SMTP to ${customerEmail} for booking ${booking.booking_code}`);
-    return { sent: true, to: customerEmail, provider: 'gmail_smtp' };
+    return { sent: customerSent, to: customerEmail || adminEmail, provider: customerSent ? 'gmail_smtp' : 'admin_only' };
   } catch (err) {
     console.error('📧 Email send error:', err.message);
     return { sent: false, reason: err.message };
   }
 }
 
-// ─── Send SMS Confirmation (Fast2SMS) ────────────────────────────────────────
-
-export async function sendSMSConfirmation(booking, settings) {
-  try {
-    const apiKey = process.env.FAST2SMS_API_KEY?.trim();
-    if (!apiKey) {
-      console.log('📱 SMS: Not configured (set FAST2SMS_API_KEY in .env)');
-      return { sent: false, reason: 'not_configured' };
-    }
-
-    // Strip to 10-digit Indian mobile number
-    const raw = (booking.customer_phone || '').replace(/[^0-9]/g, '');
-    const mobile = raw.length === 12 && raw.startsWith('91') ? raw.slice(2)
-                 : raw.length === 10 ? raw
-                 : null;
-
-    if (!mobile) {
-      console.log('📱 SMS: Could not parse mobile number:', booking.customer_phone);
-      return { sent: false, reason: 'invalid_number' };
-    }
-
-    const hotelName = settings?.hotel_name || 'Guest House';
-    const message = `Booking Confirmed! Ref: ${booking.booking_code}. Room: ${booking.room_name || 'Reserved Room'}. Check-in: ${booking.check_in_date}. Amt: ${settings?.currency_symbol || '\u20B9'}${booking.total_amount}. ${hotelName}`;
-
-    const response = await axios.post(
-      'https://www.fast2sms.com/dev/bulkV2',
-      {
-        route: 'q',
-        message,
-        language: 'english',
-        numbers: mobile
-      },
-      {
-        headers: {
-          authorization: apiKey,
-          'Content-Type': 'application/json'
-        },
-        timeout: 8000
-      }
-    );
-
-    if (response.data?.return === true) {
-      console.log(`📱 SMS sent to ${mobile} for booking ${booking.booking_code}`);
-      return { sent: true, to: mobile };
-    } else {
-      console.warn('📱 SMS: Fast2SMS response:', response.data);
-      return { sent: false, reason: response.data?.message || JSON.stringify(response.data) };
-    }
-  } catch (err) {
-    const errorMsg = err.response?.data?.message || err.message;
-    console.error('📱 SMS send error:', errorMsg);
-    return { sent: false, reason: errorMsg };
-  }
-}
-
-// ─── Send All Notifications ───────────────────────────────────────────────────
+// ─── Send Booking Notifications ───────────────────────────────────────────────
 
 export async function sendBookingNotifications(booking, room, settings) {
-  const [emailResult, smsResult] = await Promise.allSettled([
-    sendEmailConfirmation(booking, room, settings),
-    sendSMSConfirmation(booking, settings)
-  ]);
-
+  const emailResult = await sendEmailConfirmation(booking, room, settings);
   return {
-    email: emailResult.status === 'fulfilled' ? emailResult.value : { sent: false, reason: emailResult.reason },
-    sms:   smsResult.status   === 'fulfilled' ? smsResult.value   : { sent: false, reason: smsResult.reason }
+    email: emailResult
   };
 }
+
