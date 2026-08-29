@@ -1,6 +1,20 @@
 const API_BASE = (import.meta.env.VITE_API_BASE || '/api').replace(/\/$/, '');
 
 async function handleResponse(res) {
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    if (!res.ok) {
+      if (res.status === 502 || res.status === 503) {
+        return { success: false, message: 'Backend service is starting up or temporarily unavailable. Please retry in 30 seconds.' };
+      }
+      return { success: false, message: `Server error: ${res.status} ${res.statusText}` };
+    }
+    return {
+      success: false,
+      message: 'API returned HTML instead of JSON. Ensure the backend server is running and VITE_API_BASE is correctly configured.'
+    };
+  }
+
   try {
     const data = await res.json();
     return data;

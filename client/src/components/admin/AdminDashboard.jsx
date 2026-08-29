@@ -9,7 +9,8 @@ import {
   adminLogin, fetchAdminStats, fetchAdminBookings, 
   updateBookingStatus, deleteBooking, saveRoom, 
   deleteRoom, fetchBlockedDates, addBlockedDate, 
-  deleteBlockedDate, fetchSettings, updateSettings, getWhatsAppLink 
+  deleteBlockedDate, fetchSettings, updateSettings, getWhatsAppLink,
+  fetchRooms
 } from '../../utils/api';
 
 const DEFAULT_AMENITIES = [
@@ -79,19 +80,30 @@ export default function AdminDashboard({ onClose, onRoomUpdated, initialSettings
       const [statsRes, bookingsRes, roomsRes, blockedRes, settingsRes] = await Promise.all([
         fetchAdminStats(),
         fetchAdminBookings({ status: bookingFilter !== 'all' ? bookingFilter : undefined, search: bookingSearch }),
-        fetch('/api/rooms').then(r => r.json()),
+        fetchRooms(),
         fetchBlockedDates(),
         fetchSettings()
       ]);
 
-      if (statsRes.success) setStats(statsRes.data);
-      if (bookingsRes.success) setBookings(bookingsRes.data);
-      if (roomsRes.success) setRooms(roomsRes.data);
-      if (blockedRes.success) setBlockedDates(blockedRes.data);
-      if (settingsRes.success) setSettings(settingsRes.data);
+      if (statsRes?.success) setStats(statsRes.data);
+      if (bookingsRes?.success) setBookings(bookingsRes.data);
+      if (roomsRes?.success) setRooms(roomsRes.data);
+      if (blockedRes?.success) setBlockedDates(blockedRes.data);
+      if (settingsRes?.success) setSettings(settingsRes.data);
+
+      const failedEndpoints = [];
+      if (!statsRes?.success) failedEndpoints.push(`Stats: ${statsRes?.message || 'Failed'}`);
+      if (!bookingsRes?.success) failedEndpoints.push(`Bookings: ${bookingsRes?.message || 'Failed'}`);
+      if (!roomsRes?.success) failedEndpoints.push(`Rooms: ${roomsRes?.message || 'Failed'}`);
+      if (!blockedRes?.success) failedEndpoints.push(`Blocked Dates: ${blockedRes?.message || 'Failed'}`);
+      if (!settingsRes?.success) failedEndpoints.push(`Settings: ${settingsRes?.message || 'Failed'}`);
+
+      if (failedEndpoints.length > 0) {
+        setMsg({ type: 'error', text: failedEndpoints.join(' | ') });
+      }
     } catch (err) {
-      console.error(err);
-      setMsg({ type: 'error', text: 'Failed to load dashboard data.' });
+      console.error('Admin dashboard loadData error:', err);
+      setMsg({ type: 'error', text: err.message || 'Failed to load dashboard data.' });
     } finally {
       setLoading(false);
     }
