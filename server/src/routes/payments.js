@@ -122,7 +122,8 @@ router.post('/verify', async (req, res) => {
 
         // Trigger background email and SMS notifications
         setImmediate(() => {
-          sendBookingNotifications(updatedBooking, room, settings).catch(err => {
+          const bookingData = updatedBooking.toJSON ? updatedBooking.toJSON() : updatedBooking;
+          sendBookingNotifications(bookingData, room, settings).catch(err => {
             console.error('Background notification error after Razorpay verification:', err.message);
           });
         });
@@ -184,7 +185,8 @@ router.post('/process', async (req, res) => {
         const settings = (await Setting.findById('general')) || {};
 
         setImmediate(() => {
-          sendBookingNotifications(booking, room, settings).catch(err => {
+          const bookingData = booking.toJSON ? booking.toJSON() : booking;
+          sendBookingNotifications(bookingData, room, settings).catch(err => {
             console.error('Background notification error in payments:', err.message);
           });
         });

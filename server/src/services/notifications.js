@@ -147,36 +147,87 @@ function buildEmailHTML(booking, room, settings) {
   `.trim();
 }
 
+// ─── Brevo HTTPS API Email Sender ───────────────────────────────────────────
+
+async function sendViaBrevo({ toEmail, toName, subject, htmlContent }) {
+  const apiKey = process.env.BREVO_API_KEY?.trim();
+  const senderEmail = process.env.BREVO_SENDER_EMAIL?.trim() || 'tnaurooms@gmail.com';
+  const senderName = process.env.BREVO_SENDER_NAME?.trim() || 'TNAU GuestHouse';
+
+  if (!apiKey) return false;
+
+  try {
+    const res = await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: { name: senderName, email: senderEmail },
+        to: [{ email: toEmail, name: toName || toEmail }],
+        subject,
+        htmlContent
+      },
+      {
+        headers: {
+          'api-key': apiKey,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      }
+    );
+    return res.status >= 200 && res.status < 300;
+  } catch (err) {
+    console.error(`📧 Brevo API error for ${toEmail}:`, err.response?.data?.message || err.message);
+    return false;
+  }
+}
+
 // ─── Send Email Confirmation ──────────────────────────────────────────────────
 
 export async function sendEmailConfirmation(booking, room, settings) {
   try {
     const customerEmail = booking.customer_email?.trim();
+    const customerName = booking.customer_name || 'Guest';
     const hotelName = settings?.hotel_name || 'Guest House';
     const html = buildEmailHTML(booking, room, settings);
+    const subject = `✅ Booking Confirmed – ${booking.booking_code} | ${hotelName}`;
     let customerSent = false;
 
-    // 1. Try Gmail SMTP → send to CUSTOMER
-    const transporter = createTransporter();
-    if (transporter && customerEmail && customerEmail.includes('@')) {
-      try {
-        await transporter.sendMail({
-          from: `"${hotelName}" <${process.env.GMAIL_USER}>`,
-          to: customerEmail,
-          subject: `✅ Booking Confirmed – ${booking.booking_code} | ${hotelName}`,
-          html,
-          text: `Booking Confirmed!\n\nDear ${booking.customer_name},\nYour booking ${booking.booking_code} is confirmed.\nCheck-in: ${booking.check_in_date}\nCheck-out: ${booking.check_out_date}\nTotal: ${settings?.currency_symbol || '₹'}${booking.total_amount}\n\nThank you, ${hotelName}`
-        });
-        console.log(`📧 Email sent via Gmail SMTP to customer: ${customerEmail}`);
+    // 1. Send to CUSTOMER
+    if (customerEmail && customerEmail.includes('@')) {
+      // Try Brevo first (HTTP API, cloud-safe, 300 free/day)
+      const brevoSent = await sendViaBrevo({
+        toEmail: customerEmail,
+        toName: customerName,
+        subject,
+        htmlContent: html
+      });
+
+      if (brevoSent) {
+        console.log(`📧 Customer email delivered via Brevo API: ${customerEmail}`);
         customerSent = true;
-      } catch (smtpErr) {
-        console.error('📧 Gmail SMTP error (customer):', smtpErr.message);
+      } else {
+        // Fallback: Gmail SMTP
+        const transporter = createTransporter();
+        if (transporter) {
+          try {
+            await transporter.sendMail({
+              from: `"${hotelName}" <${process.env.GMAIL_USER}>`,
+              to: customerEmail,
+              subject,
+              html,
+              text: `Booking Confirmed!\n\nDear ${booking.customer_name},\nYour booking ${booking.booking_code} is confirmed.\nCheck-in: ${booking.check_in_date}\nCheck-out: ${booking.check_out_date}\nTotal: ${settings?.currency_symbol || '₹'}${booking.total_amount}\n\nThank you, ${hotelName}`
+            });
+            console.log(`📧 Customer email delivered via Gmail SMTP: ${customerEmail}`);
+            customerSent = true;
+          } catch (smtpErr) {
+            console.error('📧 Gmail SMTP fallback error (customer):', smtpErr.message);
+          }
+        }
       }
-    } else if (!customerEmail || !customerEmail.includes('@')) {
+    } else {
       console.log('📧 Email: No valid customer email provided — skipping customer copy');
     }
 
-    // 2. Send admin notification copy to tnaurooms@gmail.com
+    // 2. Send admin notification copy
     const adminEmail = process.env.ADMIN_EMAIL?.trim() || 'tnaurooms@gmail.com';
     if (adminEmail) {
       const adminSubject = `📥 New Booking: ${booking.booking_code} — ${booking.customer_name}`;
@@ -196,42 +247,55 @@ export async function sendEmailConfirmation(booking, room, settings) {
         </table>
       </div>`;
 
-      // Try sending via Gmail SMTP first (no domain restriction, delivers directly to tnaurooms@gmail.com)
-      if (transporter) {
-        try {
-          await transporter.sendMail({
-            from: `"${hotelName} Booking System" <${process.env.GMAIL_USER}>`,
-            to: adminEmail,
-            subject: adminSubject,
-            html: adminHtml
-          });
-          console.log(`📧 Admin notification sent via Gmail SMTP to ${adminEmail}`);
-        } catch (smtpAdminErr) {
-          console.error('📧 Gmail SMTP error (admin copy):', smtpAdminErr.message);
-        }
-      }
+      // Try Brevo first for Admin notification
+      const adminBrevoSent = await sendViaBrevo({
+        toEmail: adminEmail,
+        toName: 'TNAU Admin',
+        subject: adminSubject,
+        htmlContent: adminHtml
+      });
 
-      // Also send via Resend if configured
-      const resendApiKey = process.env.RESEND_API_KEY?.trim();
-      if (resendApiKey) {
-        try {
-          await axios.post(
-            'https://api.resend.com/emails',
-            { from: 'TNAU Booking System <onboarding@resend.dev>', to: [adminEmail], subject: adminSubject, html: adminHtml },
-            { headers: { Authorization: `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' }, timeout: 8000 }
-          );
-          console.log(`📧 Admin notification sent via Resend to ${adminEmail}`);
-        } catch (resendErr) {
-          // If Resend trial restricts to owner email, that is expected; Gmail SMTP has already delivered it!
+      if (adminBrevoSent) {
+        console.log(`📧 Admin notification delivered via Brevo API: ${adminEmail}`);
+      } else {
+        // Fallback 1: Gmail SMTP
+        const transporter = createTransporter();
+        if (transporter) {
+          try {
+            await transporter.sendMail({
+              from: `"${hotelName} Booking System" <${process.env.GMAIL_USER}>`,
+              to: adminEmail,
+              subject: adminSubject,
+              html: adminHtml
+            });
+            console.log(`📧 Admin notification sent via Gmail SMTP: ${adminEmail}`);
+          } catch (smtpAdminErr) {
+            console.error('📧 Gmail SMTP error (admin copy):', smtpAdminErr.message);
+          }
+        }
+
+        // Fallback 2: Resend API
+        const resendApiKey = process.env.RESEND_API_KEY?.trim();
+        if (resendApiKey) {
+          try {
+            await axios.post(
+              'https://api.resend.com/emails',
+              { from: 'TNAU Booking System <onboarding@resend.dev>', to: [adminEmail], subject: adminSubject, html: adminHtml },
+              { headers: { Authorization: `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' }, timeout: 8000 }
+            );
+            console.log(`📧 Admin notification sent via Resend: ${adminEmail}`);
+          } catch (resendErr) {
+            // Silently handled
+          }
         }
       }
     }
 
-    if (!transporter && (!customerEmail || !customerEmail.includes('@'))) {
-      return { sent: false, reason: 'not_configured' };
-    }
-
-    return { sent: customerSent, to: customerEmail || adminEmail, provider: customerSent ? 'gmail_smtp' : 'admin_only' };
+    return {
+      sent: customerSent,
+      to: customerEmail || adminEmail,
+      provider: customerSent ? 'brevo_or_smtp' : 'admin_only'
+    };
   } catch (err) {
     console.error('📧 Email send error:', err.message);
     return { sent: false, reason: err.message };
