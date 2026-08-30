@@ -139,14 +139,14 @@ router.post('/', async (req, res) => {
       settings
     );
 
-    // Send email + SMS notifications asynchronously for instant confirmations
-    if (initialPaymentStatus === 'paid' || payment_method === 'pay_at_property') {
-      setImmediate(() => {
-        sendBookingNotifications(bookingJSON, room, settings).catch(err => {
-          console.error('Background notification error:', err.message);
-        });
+    // Send email + SMS notifications asynchronously for ALL new bookings
+    // (previously only triggered for 'paid' or 'pay_at_property' — this excluded
+    //  manual admin bookings made with 'razorpay' method that start as 'pending')
+    setImmediate(() => {
+      sendBookingNotifications(bookingJSON, room, settings).catch(err => {
+        console.error('Background notification error:', err.message);
       });
-    }
+    });
 
     res.status(201).json({
       success: true,
